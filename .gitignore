@@ -1,0 +1,47 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build outputs
+dist/
+build/
+.out/
+.next/
+.cache/
+coverage/
+*.log
+
+# Environment & secrets
+.env
+.env.*
+backend/.env
+backend/.env.*
+backend/node_modules/
+
+frontend/.env
+frontend/.env.*
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+frontend/.out/
+frontend/.next/
+frontend/.cache/
+frontend/coverage/
+frontend/*.log
+
+# OS / editor junk
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# IDE
+.vscode/
+.idea/
+*.iml
+
+# Misc
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*

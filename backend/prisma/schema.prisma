@@ -1,0 +1,157 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String         @id @default(cuid())
+  email         String         @unique
+  passwordHash  String
+  name          String
+  role          UserRole       @default(USER)
+  preferences   Json?
+  apiKeys       ApiKey[]
+  conversations Conversation[]
+  agents        Agent[]
+  reviews       Review[]
+  usage         Usage[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@index([email])
+}
+
+model ApiKey {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  key       String   @unique
+  name      String
+  lastUsed  DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([key])
+}
+
+model Conversation {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  modelId   String
+  model     Model     @relation(fields: [modelId], references: [id])
+  messages  Message[]
+  title     String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([userId, createdAt])
+  @@index([modelId])
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role           MessageRole
+  content        String       @db.Text
+  attachments    Json?
+  createdAt      DateTime     @default(now())
+
+  @@index([conversationId, createdAt])
+}
+
+model Model {
+  id            String         @id @default(cuid())
+  name          String
+  provider      String
+  description   String         @db.Text
+  contextWindow Int
+  pricing       Json
+  rating        Float          @default(0)
+  tags          String[]
+  license       String?
+  status        ModelStatus    @default(ACTIVE)
+  conversations Conversation[]
+  reviews       Review[]
+  usage         Usage[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@index([provider])
+  @@index([rating])
+  @@index([status])
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  modelId   String
+  model     Model    @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rating    Int
+  comment   String?  @db.Text
+  createdAt DateTime @default(now())
+
+  @@unique([modelId, userId])
+  @@index([modelId])
+  @@index([userId])
+}
+
+model Agent {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name         String
+  systemPrompt String   @db.Text
+  tools        Json?
+  memoryConfig Json?
+  endpoint     String?  @unique
+  templateId   String?
+  isDeployed   Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([userId])
+  @@index([templateId])
+}
+
+model Usage {
+  id               String   @id @default(cuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  modelId          String
+  model            Model    @relation(fields: [modelId], references: [id])
+  promptTokens     Int
+  completionTokens Int
+  totalTokens      Int
+  cost             Float
+  timestamp        DateTime @default(now())
+
+  @@index([userId, timestamp])
+  @@index([modelId, timestamp])
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum MessageRole {
+  SYSTEM
+  USER
+  ASSISTANT
+}
+
+enum ModelStatus {
+  ACTIVE
+  BETA
+  DEPRECATED
+}

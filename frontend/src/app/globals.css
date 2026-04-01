@@ -1,0 +1,220 @@
+/* Global styles for NexusAI - matching reference HTML design */
+
+:root {
+  /* Colors from reference HTML */
+  --bg: #F4F2EE;
+  --bg2: #ECEAE4;
+  --bg3: #E4E1D8;
+  --white: #FFFFFF;
+  --card: #FFFFFF;
+  --text: #1C1A16;
+  --text2: #5A5750;
+  --text3: #9E9B93;
+  --accent: #C8622A;
+  --accent2: #A34D1E;
+  --accent-lt: #FDF1EB;
+  --accent-border: rgba(200, 98, 42, 0.2);
+  --blue: #1E4DA8;
+  --blue-lt: #EBF0FC;
+  --blue-border: rgba(30, 77, 168, 0.2);
+  --teal: #0A5E49;
+  --teal-lt: #E2F5EF;
+  --amber: #8A5A00;
+  --amber-lt: #FDF5E0;
+  --rose: #9B2042;
+  --rose-lt: #FDEDF1;
+
+  /* Border radius */
+  --radius-sm: 8px;
+  --radius: 12px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+
+  /* Shadows */
+  --shadow: 0 2px 14px rgba(0, 0, 0, 0.07);
+  --shadow-md: 0 4px 24px rgba(0, 0, 0, 0.08);
+
+  /* Borders */
+  --border: rgba(0, 0, 0, 0.08);
+  --border2: rgba(0, 0, 0, 0.12);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  height: 100%;
+  font-family: var(--font-instrument-sans), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--text);
+}
+
+/* Animations from reference HTML */
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@keyframes micPulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Utility classes */
+.fade-up {
+  animation: fadeUp 0.4s ease;
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease;
+}
+
+.slide-up {
+  animation: slideUp 0.3s ease;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg2);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border2);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text3);
+}
+
+/* Focus visible styles for accessibility */
+*:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Typography helpers */
+.font-syne {
+  font-family: 'Syne', sans-serif;
+}
+
+/* Badge colors */
+.badge-hot {
+  background: linear-gradient(135deg, #FF6B6B, #FF4757);
+  color: white;
+}
+
+.badge-new {
+  background: var(--teal-lt);
+  color: var(--teal);
+  border: 1px solid rgba(10, 94, 73, 0.2);
+}
+
+.badge-open {
+  background: var(--blue-lt);
+  color: var(--blue);
+  border: 1px solid var(--blue-border);
+}
+
+/* Tag colors */
+.tag-blue {
+  background: var(--blue-lt);
+  color: var(--blue);
+}
+
+.tag-teal {
+  background: var(--teal-lt);
+  color: var(--teal);
+}
+
+.tag-amber {
+  background: var(--amber-lt);
+  color: var(--amber);
+}
+
+.tag-rose {
+  background: var(--rose-lt);
+  color: var(--rose);
+}
+
