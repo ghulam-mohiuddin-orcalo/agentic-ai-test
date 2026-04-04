@@ -5,40 +5,31 @@ description: Run Prisma migrations and generate client
 
 # Migrate Skill
 
-Handles Prisma database migrations and client generation.
+Applies Prisma schema changes to the database and regenerates the client.
 
 ## Usage
 
 ```bash
-/migrate [name]
-```
-
-## What it does
-
-1. Checks if Prisma schema exists
-2. Runs `prisma migrate dev --name <name>`
-3. Generates Prisma client
-4. Validates migration success
-
-## Examples
-
-```bash
 /migrate add-user-preferences
-/migrate create-agents-table
+/migrate create-notifications-table
 ```
 
-## Implementation
+## Steps
 
-```typescript
-// Check schema
-const schemaExists = await fileExists('prisma/schema.prisma');
+1. Verify `backend/prisma/schema.prisma` exists and is valid
+2. Run `cd backend && npx prisma validate`
+3. Run `cd backend && npx prisma migrate dev --name <name>`
+4. Run `cd backend && npx prisma generate`
+5. Report: migration file created, client generated
 
-// Run migration
-await exec(`npx prisma migrate dev --name ${name}`);
+## Error Handling
 
-// Generate client
-await exec('npx prisma generate');
+- If validate fails: show the schema error and stop
+- If migrate fails: show the SQL error, suggest fixes
+- If generate fails: show the error, may need `npm install`
 
-// Verify
-await exec('npx prisma validate');
-```
+## Notes
+
+- Always run from project root
+- The `backend/` prefix is required for all Prisma commands
+- Migration name should be descriptive (e.g., `add-user-preferences`, not `update`)
