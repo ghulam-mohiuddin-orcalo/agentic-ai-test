@@ -1,79 +1,108 @@
 ---
 name: test-writer
-description: Write comprehensive tests for NestJS modules
+description: Write unit, integration, and e2e tests for NestJS and Next.js
 type: general-purpose
 ---
 
 # Test Writer Agent
 
-Writes unit, integration, and e2e tests for NestJS applications.
+Writes tests for backend services/controllers and frontend components.
 
-## Responsibilities
+## Startup
 
-- Write service unit tests
-- Write controller integration tests
-- Write e2e tests for critical flows
-- Mock external dependencies
-- Test error scenarios
-- Achieve 80%+ coverage
+1. Read `rules/coding-standards.md` for test file naming
+2. Read the source file being tested
+3. Read existing test files in the same module (if any) for patterns
 
-## When to Use
+## Backend Test Patterns
 
-- After implementing new features
-- Before refactoring
-- When fixing bugs
-- For critical business logic
-
-## Approach
-
-1. Identify test scenarios (happy path + edge cases)
-2. Set up test fixtures and mocks
-3. Write unit tests for services
-4. Write integration tests for controllers
-5. Write e2e tests for flows
-6. Test error handling
-7. Verify coverage
-
-## Test Structure
-
+### Service Unit Test
 ```typescript
+import { Test } from '@nestjs/testing';
+import { ModelsService } from './models.service';
+import { PrismaService } from '@/prisma/prisma.service';
+
 describe('ModelsService', () => {
   let service: ModelsService;
-  let prisma: PrismaService;
+  let prisma: Record<string, jest.Mock>;
 
   beforeEach(async () => {
+    prisma = {
+      model: {
+        findMany: jest.fn(),
+        count: jest.fn(),
+        findUnique: jest.fn(),
+        create: jest.fn(),
+      },
+    };
+
     const module = await Test.createTestingModule({
       providers: [
         ModelsService,
-        { provide: PrismaService, useValue: mockPrisma },
+        { provide: PrismaService, useValue: prisma },
       ],
     }).compile();
 
     service = module.get(ModelsService);
-    prisma = module.get(PrismaService);
   });
 
   describe('findAll', () => {
-    it('should return paginated models', async () => {
-      // Arrange
-      const mockModels = [{ id: '1', name: 'GPT-4' }];
-      prisma.model.findMany.mockResolvedValue(mockModels);
+    it('returns paginated results', async () => {
+      prisma.model.findMany.mockResolvedValue([{ id: '1' }]);
+      prisma.model.count.mockResolvedValue(1);
 
-      // Act
       const result = await service.findAll({ page: 1, limit: 20 });
 
-      // Assert
-      expect(result.data).toEqual(mockModels);
-      expect(prisma.model.findMany).toHaveBeenCalled();
-    });
-
-    it('should handle errors', async () => {
-      // Arrange
-      prisma.model.findMany.mockRejectedValue(new Error('DB error'));
-
-      // Act & Assert
-      await expect(service.findAll({})).rejects.toThrow();
+      expect(result.data).toHaveLength(1);
+      expect(result.meta.total).toBe(1);
     });
   });
 });
 ```
+
+### Controller Integration Test
+```typescript
+import { Test } from '@nestjs/testing';
+import { ModelsController } from './models.controller';
+import { ModelsService } from './models.service';
+
+describe('ModelsController', () => {
+  let controller: ModelsController;
+  let service: Record<string, jest.Mock>;
+
+  beforeEach(async () => {
+    service = { findAll: jest.fn(), findOne: jest.fn() };
+
+    const module = await Test.createTestingModule({
+      controllers: [ModelsController],
+      providers: [{ provide: ModelsService, useValue: service }],
+    }).compile();
+
+    controller = module.get(ModelsController);
+  });
+
+  it('delegates findAll to service', async () => {
+    service.findAll.mockResolvedValue({ data: [], meta: {} });
+    const result = await controller.findAll({});
+    expect(service.findAll).toHaveBeenCalled();
+  });
+});
+```
+
+## Test File Locations
+
+```
+backend/src/modules/[module]/
+├── [module].service.spec.ts      # Service unit tests
+├── [module].controller.spec.ts   # Controller unit tests
+```
+
+## Coverage Targets
+
+- Services: 80%+ (all methods, error paths)
+- Controllers: 70%+ (all routes)
+- Focus on: happy path, validation failures, not-found, unauthorized
+
+## Token Rule
+
+Read only the file being tested. Write the test file. Don't read other test files.

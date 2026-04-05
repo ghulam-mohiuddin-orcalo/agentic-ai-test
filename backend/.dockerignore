@@ -1,0 +1,7 @@
+.env
+.env.*
+*.log
+coverage
+.git
+src
+test

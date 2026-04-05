@@ -1,42 +1,41 @@
 ---
 name: seed
-description: Seed database with sample data
+description: Seed database with sample data for development
 ---
 
 # Seed Skill
 
-Populates database with sample data for development.
+Populates the database with sample models, users, and conversations for development.
 
 ## Usage
 
 ```bash
-/seed [--reset]
+/seed          # Run seed
+/seed --reset  # Reset database first, then seed
 ```
 
-## What it does
+## Steps
 
-1. Optionally resets database (--reset flag)
-2. Runs `prisma db seed`
-3. Reports seeded records count
+1. Check if `backend/prisma/seed.ts` exists
+   - If not: create it with sample data (models, admin user, test conversations)
+2. If `--reset`: run `cd backend && npx prisma migrate reset --force`
+3. Run `cd backend && npx prisma db seed`
+4. Report: records created per table
 
-## Examples
+## Sample Seed Data
 
-```bash
-/seed
-/seed --reset
-```
+When creating seed.ts, include:
+- 1 admin user (admin@nexusai.com)
+- 5+ AI models across providers (OpenAI, Anthropic, Google)
+- 3+ sample conversations with messages
+- 2+ agent templates
+- Usage data for the last 7 days
 
-## Implementation
+## Prisma Seed Config
 
-```typescript
-// Reset if flag provided
-if (reset) {
-  await exec('npx prisma migrate reset --force');
+Ensure `backend/package.json` has:
+```json
+"prisma": {
+  "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
 }
-
-// Run seed
-await exec('npx prisma db seed');
-
-// Report
-console.log('Database seeded successfully');
 ```

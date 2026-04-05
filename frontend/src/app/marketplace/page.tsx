@@ -22,6 +22,8 @@ import {
 } from '@mui/icons-material';
 import MarketplaceFilterSidebar, { FilterState } from '@/components/marketplace/MarketplaceFilterSidebar';
 import MarketplaceModelCard from '@/components/marketplace/MarketplaceModelCard';
+import ModelDetailDialog from '@/components/marketplace/ModelDetailDialog';
+import QuickGuides from '@/components/marketplace/QuickGuides';
 import { MARKETPLACE_MODELS } from '@/lib/marketplaceData';
 import { AI_LABS } from '@/lib/constants';
 import type { ModelData } from '@/components/models/ModelCard';
@@ -49,6 +51,8 @@ const DEFAULT_FILTERS: FilterState = {
   providers: [],
   types: [],
   priceRange: [0, 50],
+  pricingModel: 'any',
+  minRating: 0,
   license: 'any',
   contextSize: 'any',
 };
@@ -76,6 +80,7 @@ export default function MarketplacePage() {
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
   const [gridView, setGridView] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [selectedModel, setSelectedModel] = useState<ModelData | null>(null);
 
   const filtered = useMemo(() => {
     let result = MARKETPLACE_MODELS;
@@ -111,6 +116,18 @@ export default function MarketplacePage() {
       (m) => m.priceStart >= filters.priceRange[0] && m.priceStart <= filters.priceRange[1]
     );
 
+    if (filters.pricingModel === 'free') {
+      result = result.filter((m) => m.priceStart === 0);
+    } else if (filters.pricingModel === 'freemium') {
+      result = result.filter((m) => m.priceStart >= 0 && m.priceStart <= 1);
+    } else if (filters.pricingModel === 'paid') {
+      result = result.filter((m) => m.priceStart > 0);
+    }
+
+    if (filters.minRating > 0) {
+      result = result.filter((m) => m.rating >= filters.minRating);
+    }
+
     if (filters.license === 'open') {
       result = result.filter((m) => m.badge === 'open' || m.types.includes('open'));
     }
@@ -122,6 +139,8 @@ export default function MarketplacePage() {
     filters.providers.length +
     filters.types.length +
     (filters.priceRange[0] > 0 || filters.priceRange[1] < 50 ? 1 : 0) +
+    (filters.pricingModel !== 'any' ? 1 : 0) +
+    (filters.minRating > 0 ? 1 : 0) +
     (filters.license !== 'any' ? 1 : 0) +
     (filters.contextSize !== 'any' ? 1 : 0);
 
@@ -370,6 +389,7 @@ export default function MarketplacePage() {
 
           {/* Model grid */}
           <Box sx={{ flex: 1, overflowY: 'auto', p: 2.5 }}>
+            <QuickGuides />
             {filtered.length === 0 ? (
               <Box sx={{ textAlign: 'center', py: 8 }}>
                 <Typography sx={{ fontSize: '2.5rem', mb: 1.5 }}>🔍</Typography>
@@ -411,13 +431,19 @@ export default function MarketplacePage() {
                 }
               >
                 {filtered.map((model) => (
-                  <MarketplaceModelCard key={model.id} model={model} />
+                  <MarketplaceModelCard key={model.id} model={model} onClick={setSelectedModel} />
                 ))}
               </Box>
             )}
           </Box>
         </Box>
       </Box>
+
+      <ModelDetailDialog
+        model={selectedModel}
+        open={selectedModel !== null}
+        onClose={() => setSelectedModel(null)}
+      />
     </Box>
   );
 }

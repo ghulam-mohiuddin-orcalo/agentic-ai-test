@@ -1,130 +1,122 @@
 ---
 name: agentic-workflows
-description: Standard agent + skill workflows for NexusAI backend
+description: Standard workflows combining agents and skills for common task types
 ---
 
 # Agentic Workflows
 
-This file defines standard, repeatable workflows that combine agents and skills to work on the NexusAI backend efficiently.
+Quick-reference for which agents and skills to chain for each task type.
 
-## Overview of Available Agents
+## Available Agents
 
-- **feature-planner**: High-level feature planning and breakdown
-- **backend-architect**: Design NestJS module architecture and Prisma schemas
-- **api-builder**: Implement controllers, services, DTOs, and tests
-- **database-expert**: Design/optimize Prisma schema and queries
-- **security-auditor**: Security review and hardening
-- **test-writer**: Unit, integration, and e2e test authoring
+| Agent | Type | Purpose |
+|-------|------|---------|
+| `feature-planner` | plan | Break features into agent-executable tasks |
+| `database-expert` | general | Schema, migrations, query optimization |
+| `backend-architect` | plan | Module/API surface design |
+| `api-builder` | general | Implement controllers, services, DTOs |
+| `ai-provider` | general | OpenAI/Anthropic/Google integration |
+| `frontend-dev` | general | React/Next.js pages and components |
+| `security-auditor` | general | Security review |
+| `test-writer` | general | Unit, integration, e2e tests |
+| `devops` | general | Docker, CI/CD, deployment |
 
-## Overview of Available Skills
+## Available Skills
 
-- `/migrate [name]`: Run Prisma migrations and generate client
-- `/seed [--reset]`: Seed database with sample data
-- `/test-module <name> [--watch] [--coverage]`: Run tests for a module
-- `/api-doc [--serve]`: Generate/serve API documentation
+| Skill | Purpose |
+|-------|---------|
+| `/migrate [name]` | Prisma migrate + generate |
+| `/seed [--reset]` | Seed database |
+| `/test-module <name>` | Run module tests |
+| `/api-doc [--serve]` | Swagger docs |
+| `/lint` | ESLint + Prettier |
+| `/docker-up` | Start infrastructure (PostgreSQL + Redis) |
 
-## Workflow 1 – New Backend Feature (Happy Path)
+## Workflow 1: New Full-Stack Feature
 
-Use this when adding a new capability to the backend (e.g. “usage-based billing”, “model tags”, “agent templates”).
+```
+feature-planner (plan)
+  → database-expert (schema)     ─┐
+  → backend-architect (design)   ─┤ parallel
+  → /migrate [name]              ─┘
+  → api-builder (implement)      ─┐ parallel
+  → frontend-dev (UI)            ─┘
+  → test-writer (tests)
+  → security-auditor (review)
+  → /test-module [name]
+```
 
-1. **Plan**
-   - Agent: **feature-planner**
-   - Goal: Turn the product idea into a concrete plan.
-   - Inputs:
-     - Short feature description
-     - Affected user roles
-     - Constraints (latency, security, cost, scale)
-   - Output:
-     - Checklist of subtasks, mapping each to agents and skills below.
+## Workflow 2: Backend-Only Feature
 
-2. **Schema & Data Design**
-   - Agent: **database-expert**
-   - Use `rules/performance.md` and `rules/security.md` as references.
-   - Tasks:
-     - Propose Prisma model changes and indexes
-     - Identify relations and soft-delete needs
-   - Then:
-     - Run `/migrate <meaningful-name>`
-     - Optionally run `/seed [--reset]` to prepare dev data.
+```
+database-expert (schema)
+  → /migrate [name]
+  → backend-architect (design)
+  → api-builder (implement)
+  → test-writer (tests)
+  → /test-module [name]
+```
 
-3. **Module & API Design**
-   - Agent: **backend-architect**
-   - Tasks:
-     - Decide which module(s) to extend or create
-     - Design controllers, services, DTOs, guards, interceptors as needed
-     - Specify endpoints, DTO fields, and auth requirements
+## Workflow 3: Schema-Only Change
 
-4. **Implementation**
-   - Agent: **api-builder**
-   - Tasks:
-     - Implement or update controllers and services
-     - Wire Prisma access, caching, queues, and AI provider calls
-     - Keep controllers thin; move business logic into services.
+```
+database-expert (schema)
+  → /migrate [name]
+  → /seed [--reset]
+  → test-writer (adjust impacted tests)
+```
 
-5. **Testing**
-   - Agent: **test-writer**
-   - Tasks:
-     - Add unit tests for services and key utilities
-     - Add integration/e2e tests for critical flows
-   - Run:
-     - `/test-module <module-name> [--coverage]`
+## Workflow 4: Frontend-Only Feature
 
-6. **Security Review**
-   - Agent: **security-auditor**
-   - Use:
-     - `rules/security.md`
-     - `CLAUDE.md` security sections
-   - Tasks:
-     - Verify auth/guards, validation, rate limiting, logging, and secrets
+```
+frontend-dev (directly)
+  → /lint
+```
 
-7. **Docs & Finalization**
-   - Run:
-     - `/api-doc [--serve]` to update and/or preview API documentation.
-   - Ensure relevant parts of `CLAUDE.md` or project docs reflect the changes.
+## Workflow 5: AI Provider Integration
 
-## Workflow 2 – Schema-Only Change
+```
+ai-provider (providers + router)
+  → test-writer (mock provider tests)
+  → security-auditor (API key handling)
+```
 
-Use when the main work is changing data structures (e.g. adding columns, indexes).
+## Workflow 6: Bug Fix
 
-1. **database-expert**
-   - Propose Prisma schema changes and migration plan.
-2. `/migrate <name>`
-3. `/seed [--reset]` if data reset is acceptable.
-4. **test-writer**
-   - Adjust tests impacted by schema changes.
-5. `/test-module <affected-module> --coverage`
+```
+api-builder OR frontend-dev (directly, no planning needed)
+  → /test-module [affected-module]
+```
 
-## Workflow 3 – Security Hardening Pass
+## Workflow 7: Security Hardening
 
-Use before production, after major auth changes, or when reviewing attack surface.
+```
+security-auditor (full review)
+  → database-expert (query patterns)
+  → test-writer (auth/validation tests)
+  → /test-module auth --coverage
+```
 
-1. **security-auditor**
-   - Review modules, DTOs, guards using:
-     - `rules/security.md`
-     - `CLAUDE.md` security notes
-2. **database-expert**
-   - Validate query patterns, raw SQL usage, and least-privilege DB access.
-3. **test-writer**
-   - Add tests for auth, rate limiting, and validation failure paths.
-4. `/test-module auth --coverage`
+## Workflow 8: Performance Optimization
 
-## Workflow 4 – Performance Optimization
+```
+database-expert (hotspot analysis)
+  → backend-architect (caching/queue strategy)
+  → api-builder (implement optimizations)
+  → test-writer (regression tests)
+```
 
-Use when there are latency, throughput, or cost issues.
+## Workflow 9: Docker/Deploy
 
-1. **database-expert**
-   - Analyze hotspots and propose schema/index/query changes.
-2. **backend-architect**
-   - Adjust module boundaries, caching layers, or use queues/background jobs.
-3. Implement optimizations with **api-builder**.
-4. **test-writer**
-   - Add regression tests around optimized endpoints.
-5. `/test-module <module-name>`
+```
+devops (directly)
+  → docker compose up -d (start infrastructure)
+```
 
-## How to Use This File
+## Routing Heuristic
 
-- Start with **feature-planner** for any non-trivial change.
-- For each checklist item, explicitly choose the corresponding agent and run it with the relevant rules file(s) attached.
-- Trigger the skills (`/migrate`, `/seed`, `/test-module`, `/api-doc`) at the points indicated above.
-- Keep this file updated as the project adds new agents or skills.
-
+- **Single module, no schema change?** → Skip planner, go direct to specialist
+- **Cross-module or new feature?** → Start with feature-planner
+- **Only frontend?** → frontend-dev directly
+- **Only database?** → database-expert directly
+- **Security concern?** → security-auditor directly

@@ -1,18 +1,17 @@
 'use client';
 
-import { Box, Typography, Button, TextField, InputAdornment } from '@mui/material';
+import { Box, Typography, Button, TextField } from '@mui/material';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 
 export default function NewsletterCTA() {
   return (
     <Box
       sx={{
-        bgcolor: '#1C1A16',
+        background: 'linear-gradient(135deg, #1C1A16 0%, #2D2A24 100%)',
         color: '#fff',
         textAlign: 'center',
         py: { xs: 7, md: 9 },
         px: { xs: 3, md: 4 },
-        // Full-width bleed — handled by removing Container in page.tsx for this section
       }}
     >
       {/* Tag */}
@@ -37,23 +36,23 @@ export default function NewsletterCTA() {
 
       {/* Heading */}
       <Typography
-        variant="h2"
         sx={{
+          fontFamily: "'Syne', sans-serif",
           color: '#fff',
           fontSize: { xs: '2rem', md: '2.75rem' },
           lineHeight: 1.15,
           mb: 2,
           fontWeight: 700,
+          letterSpacing: '-0.03em',
         }}
       >
         New models drop every week.
         <br />
-        Don't miss a release.
+        Don&apos;t miss a release.
       </Typography>
 
       {/* Subtitle */}
       <Typography
-        variant="body1"
         sx={{
           color: 'rgba(255,255,255,0.55)',
           mb: 4,
@@ -133,7 +132,6 @@ export default function NewsletterCTA() {
 
       {/* Trust line */}
       <Typography
-        variant="caption"
         sx={{
           display: 'block',
           mt: 2,

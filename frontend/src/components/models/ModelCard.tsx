@@ -1,6 +1,6 @@
 'use client';
 
-import { Box, Card, CardContent, Typography, Chip, Rating } from '@mui/material';
+import { Box, Typography } from '@mui/material';
 import StarIcon from '@mui/icons-material/Star';
 
 export interface ModelData {
@@ -40,125 +40,294 @@ const BADGE_CONFIG = {
 interface ModelCardProps {
   model: ModelData;
   onClick?: (model: ModelData) => void;
+  variant?: 'default' | 'compact';
 }
 
-export default function ModelCard({ model, onClick }: ModelCardProps) {
+function CompactModelCard({ model, onClick }: Omit<ModelCardProps, 'variant'>) {
   return (
-    <Card
+    <Box
       onClick={() => onClick?.(model)}
       sx={{
+        bgcolor: 'background.paper',
+        border: '1px solid',
+        borderColor: 'divider',
+        borderRadius: '20px',
+        p: 1.5,
         cursor: 'pointer',
+        transition: 'all 0.22s',
+        boxShadow: 1,
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
+        '&:hover': {
+          transform: 'translateY(-3px)',
+          boxShadow: 2,
+          borderColor: (t) => t.palette.custom.border2,
+        },
       }}
     >
-      <CardContent sx={{ flexGrow: 1, p: 2.5 }}>
-        {/* Header row */}
-        <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 1.5 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-            <Box
-              sx={{
-                width: 44,
-                height: 44,
-                borderRadius: '12px',
-                bgcolor: model.bg,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '1.375rem',
-                flexShrink: 0,
-              }}
-            >
-              {model.icon}
-            </Box>
-            <Box>
-              <Typography variant="h4" sx={{ lineHeight: 1.2, mb: 0.25 }}>
-                {model.name}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                {model.org}
-              </Typography>
-            </Box>
+      {/* Header row: icon + name/org + badge */}
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Box
+            sx={{
+              width: 36,
+              height: 36,
+              borderRadius: '10px',
+              bgcolor: model.bg,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '1.125rem',
+              flexShrink: 0,
+            }}
+          >
+            {model.icon}
           </Box>
-          {model.badge && (
-            <Box
+          <Box>
+            <Typography
               sx={{
-                px: 1,
-                py: 0.375,
-                borderRadius: '2rem',
-                background: BADGE_CONFIG[model.badge].bg,
-                color: BADGE_CONFIG[model.badge].color,
-                fontSize: '0.6875rem',
+                fontFamily: "'Syne', sans-serif",
+                fontSize: '0.9375rem',
                 fontWeight: 600,
-                whiteSpace: 'nowrap',
-                flexShrink: 0,
+                letterSpacing: '-0.02em',
+                lineHeight: 1.2,
+                mb: 0.125,
               }}
             >
-              {BADGE_CONFIG[model.badge].label}
-            </Box>
-          )}
+              {model.name}
+            </Typography>
+            <Typography sx={{ fontSize: '0.6875rem', color: 'text.disabled' }}>
+              {model.org}
+            </Typography>
+          </Box>
         </Box>
+        {model.badge && (
+          <Box
+            sx={{
+              px: 0.75,
+              py: 0.25,
+              borderRadius: '2rem',
+              background: BADGE_CONFIG[model.badge].bg,
+              color: BADGE_CONFIG[model.badge].color,
+              fontSize: '0.625rem',
+              fontWeight: 600,
+              whiteSpace: 'nowrap',
+              flexShrink: 0,
+            }}
+          >
+            {BADGE_CONFIG[model.badge].label}
+          </Box>
+        )}
+      </Box>
 
-        {/* Description */}
+      {/* Tags as small chips */}
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.375, mb: 1 }}>
+        {model.tags.map((tag) => {
+          const tc = TAG_COLORS[tag] || TAG_COLORS.default;
+          return (
+            <Box
+              key={tag}
+              sx={{
+                px: 0.75,
+                py: 0.125,
+                borderRadius: '2rem',
+                bgcolor: tc.bg,
+                color: tc.color,
+                fontSize: '0.625rem',
+                fontWeight: 500,
+              }}
+            >
+              {tag}
+            </Box>
+          );
+        })}
+      </Box>
+
+      {/* Footer: price + try button */}
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 'auto' }}>
         <Typography
-          variant="body2"
-          color="text.secondary"
           sx={{
-            mb: 1.5,
-            display: '-webkit-box',
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: 'vertical',
-            overflow: 'hidden',
-            lineHeight: 1.5,
+            fontSize: '0.75rem',
+            fontWeight: 600,
+            color: model.price.toLowerCase().includes('free') ? 'success.main' : 'text.primary',
           }}
         >
-          {model.desc}
+          {model.price}
         </Typography>
-
-        {/* Tags */}
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 1.5 }}>
-          {model.tags.map((tag) => {
-            const tc = TAG_COLORS[tag] || TAG_COLORS.default;
-            return (
-              <Box
-                key={tag}
-                sx={{
-                  px: 1,
-                  py: 0.25,
-                  borderRadius: '2rem',
-                  bgcolor: tc.bg,
-                  color: tc.color,
-                  fontSize: '0.6875rem',
-                  fontWeight: 500,
-                }}
-              >
-                {tag}
-              </Box>
-            );
-          })}
+        <Box
+          component="a"
+          href="/chat"
+          sx={{
+            fontSize: '0.75rem',
+            fontWeight: 600,
+            color: 'primary.main',
+            textDecoration: 'none',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 0.5,
+            '&:hover': { textDecoration: 'underline' },
+          }}
+        >
+          Try →
         </Box>
+      </Box>
+    </Box>
+  );
+}
 
-        {/* Footer row */}
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-            <StarIcon sx={{ fontSize: 14, color: '#F5A623' }} />
-            <Typography variant="caption" fontWeight={600} sx={{ color: 'text.primary' }}>
-              {model.rating.toFixed(1)}
+export default function ModelCard({ model, onClick, variant = 'default' }: ModelCardProps) {
+  if (variant === 'compact') {
+    return <CompactModelCard model={model} onClick={onClick} />;
+  }
+
+  return (
+    <Box
+      onClick={() => onClick?.(model)}
+      sx={{
+        bgcolor: 'background.paper',
+        border: '1px solid',
+        borderColor: 'divider',
+        borderRadius: '20px',
+        p: 2.5,
+        cursor: 'pointer',
+        transition: 'all 0.22s',
+        boxShadow: 1,
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        '&:hover': {
+          transform: 'translateY(-3px)',
+          boxShadow: 2,
+          borderColor: (t) => t.palette.custom.border2,
+        },
+      }}
+    >
+      {/* Header row */}
+      <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 1.5 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <Box
+            sx={{
+              width: 44,
+              height: 44,
+              borderRadius: '11px',
+              bgcolor: model.bg,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '1.375rem',
+              flexShrink: 0,
+            }}
+          >
+            {model.icon}
+          </Box>
+          <Box>
+            <Typography
+              sx={{
+                fontFamily: "'Syne', sans-serif",
+                fontSize: '1rem',
+                fontWeight: 600,
+                letterSpacing: '-0.02em',
+                lineHeight: 1.2,
+                mb: 0.25,
+              }}
+            >
+              {model.name}
             </Typography>
-            <Typography variant="caption" color="text.secondary">
-              ({model.reviews.toLocaleString()})
+            <Typography sx={{ fontSize: '0.75rem', color: 'text.disabled' }}>
+              {model.org}
             </Typography>
           </Box>
-          <Typography
-            variant="caption"
-            fontWeight={600}
-            sx={{ color: model.price === 'Free' ? 'success.main' : 'text.primary' }}
+        </Box>
+        {model.badge && (
+          <Box
+            sx={{
+              px: 1,
+              py: 0.375,
+              borderRadius: '2rem',
+              background: BADGE_CONFIG[model.badge].bg,
+              color: BADGE_CONFIG[model.badge].color,
+              fontSize: '0.6875rem',
+              fontWeight: 600,
+              whiteSpace: 'nowrap',
+              flexShrink: 0,
+            }}
           >
-            {model.price}
+            {BADGE_CONFIG[model.badge].label}
+          </Box>
+        )}
+      </Box>
+
+      {/* Description */}
+      <Typography
+        sx={{
+          fontSize: '0.83rem',
+          color: 'text.secondary',
+          lineHeight: 1.55,
+          mb: 1.5,
+          display: '-webkit-box',
+          WebkitLineClamp: 2,
+          WebkitBoxOrient: 'vertical',
+          overflow: 'hidden',
+        }}
+      >
+        {model.desc}
+      </Typography>
+
+      {/* Tags */}
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 1.5 }}>
+        {model.tags.map((tag) => {
+          const tc = TAG_COLORS[tag] || TAG_COLORS.default;
+          return (
+            <Box
+              key={tag}
+              sx={{
+                px: 1,
+                py: 0.25,
+                borderRadius: '2rem',
+                bgcolor: tc.bg,
+                color: tc.color,
+                fontSize: '0.6875rem',
+                fontWeight: 500,
+              }}
+            >
+              {tag}
+            </Box>
+          );
+        })}
+      </Box>
+
+      {/* Footer row */}
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          pt: 1,
+          borderTop: '1px solid',
+          borderTopColor: 'divider',
+          mt: 'auto',
+        }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          <StarIcon sx={{ fontSize: 14, color: (t: any) => t.palette.custom.star }} />
+          <Typography sx={{ fontSize: '0.78rem', fontWeight: 600, color: 'text.primary' }}>
+            {model.rating.toFixed(1)}
+          </Typography>
+          <Typography sx={{ fontSize: '0.75rem', color: 'text.disabled' }}>
+            ({model.reviews.toLocaleString()})
           </Typography>
         </Box>
-      </CardContent>
-    </Card>
+        <Typography
+          sx={{
+            fontSize: '0.78rem',
+            fontWeight: 500,
+            color: model.price === 'Free' ? 'success.main' : 'text.primary',
+          }}
+        >
+          {model.price}
+        </Typography>
+      </Box>
+    </Box>
   );
 }

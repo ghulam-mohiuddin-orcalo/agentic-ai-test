@@ -1,41 +1,28 @@
 ---
 name: api-doc
-description: Generate API documentation from controllers
+description: Generate Swagger/OpenAPI documentation
 ---
 
 # API Doc Skill
 
-Generates OpenAPI/Swagger documentation from NestJS decorators.
+Builds the backend and serves Swagger UI for API documentation.
 
 ## Usage
 
 ```bash
-/api-doc [--serve]
+/api-doc           # Build and generate spec
+/api-doc --serve   # Start server with Swagger UI
 ```
 
-## What it does
+## Steps
 
-1. Scans controllers for Swagger decorators
-2. Generates OpenAPI spec
-3. Optionally serves Swagger UI
-4. Exports to `docs/api.json`
+1. Run `cd backend && npm run build`
+2. Start server briefly to generate spec (or use NestJS Swagger CLI plugin)
+3. Output spec to `backend/docs/api.json` if possible
+4. If `--serve`: confirm Swagger UI is at `http://localhost:5001/api/docs`
 
-## Examples
+## Notes
 
-```bash
-/api-doc
-/api-doc --serve
-```
-
-## Implementation
-
-```typescript
-// Generate spec
-await exec('npm run build');
-await exec('npm run swagger:generate');
-
-// Serve if requested
-if (serve) {
-  console.log('Swagger UI available at http://localhost:3000/api/docs');
-}
-```
+- Swagger is configured in `main.ts` with `SwaggerModule.setup('api/docs', app, document)`
+- All DTOs should have `@ApiProperty()` decorators for full documentation
+- All endpoints should have `@ApiOperation()` and `@ApiResponse()` decorators

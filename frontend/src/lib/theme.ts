@@ -1,46 +1,77 @@
 import { createTheme } from '@mui/material/styles';
 
-// Custom MUI theme matching the NexusAI demo design
-// Reference: ai-model-hub-v12 (2).html
-export const theme = createTheme({
+// ─── Module augmentation ────────────────────────────────────────────
+declare module '@mui/material/styles' {
+  interface Palette {
+    custom: {
+      bg2: string;
+      bg3: string;
+      border2: string;
+      accentBorder: string;
+      star: string;
+      green: string;
+    };
+  }
+  interface PaletteOptions {
+    custom?: {
+      bg2: string;
+      bg3: string;
+      border2: string;
+      accentBorder: string;
+      star: string;
+      green: string;
+    };
+  }
+}
+
+// ─── Theme creation ─────────────────────────────────────────────────
+const theme = createTheme({
   palette: {
     mode: 'light',
     background: {
-      default: '#F4F2EE',      // --bg (warm beige)
-      paper: '#FFFFFF',         // --card
+      default: '#F4F2EE',
+      paper: '#FFFFFF',
     },
     text: {
-      primary: '#1C1A16',       // --text (dark brown)
-      secondary: '#5A5750',     // --text2 (medium brown)
-      disabled: '#9E9B93',      // --text3 (light brown)
+      primary: '#1C1A16',
+      secondary: '#5A5750',
+      disabled: '#9E9B93',
     },
     primary: {
-      main: '#C8622A',          // --accent (terracotta)
-      dark: '#A34D1E',          // --accent2
-      light: '#FDF1EB',         // --accent-lt
+      main: '#C8622A',
+      dark: '#A34D1E',
+      light: '#FDF1EB',
       contrastText: '#FFFFFF',
     },
     secondary: {
-      main: '#1E4DA8',          // --blue
-      light: '#EBF0FC',         // --blue-lt
+      main: '#1E4DA8',
+      light: '#EBF0FC',
       contrastText: '#FFFFFF',
     },
     success: {
-      main: '#0A5E49',          // --teal
-      light: '#E2F5EF',         // --teal-lt
+      main: '#0A5E49',
+      light: '#E2F5EF',
       contrastText: '#FFFFFF',
     },
     warning: {
-      main: '#8A5A00',          // --amber
-      light: '#FDF5E0',         // --amber-lt
+      main: '#8A5A00',
+      light: '#FDF5E0',
       contrastText: '#FFFFFF',
     },
     error: {
-      main: '#9B2042',          // --rose
-      light: '#FDEDF1',         // --rose-lt
+      main: '#9B2042',
+      light: '#FDEDF1',
       contrastText: '#FFFFFF',
     },
     divider: 'rgba(0,0,0,0.08)',
+    custom: {
+      bg2: '#ECEAE4',
+      bg3: '#E4E1D8',
+      border2: 'rgba(0,0,0,0.14)',
+      accentBorder: 'rgba(200,98,42,0.25)',
+      star: '#E8A020',
+      green: '#2E9E5B',
+    },
   },
   typography: {
     fontFamily: "'Instrument Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
@@ -94,7 +125,7 @@ export const theme = createTheme({
     },
   },
   shape: {
-    borderRadius: 12,           // --radius
+    borderRadius: 12,
   },
   shadows: [
     'none',
@@ -152,11 +183,12 @@ export const theme = createTheme({
       styleOverrides: {
         root: {
           borderRadius: 20,
-          border: '1px solid rgba(0,0,0,0.08)',
+          border: '1px solid',
+          borderColor: 'divider',
           transition: 'all 0.2s ease',
           '&:hover': {
             transform: 'translateY(-4px)',
-            boxShadow: '0 10px 26px rgba(0,0,0,0.08)',
+            boxShadow: 2,
             borderColor: 'rgba(200,98,42,0.2)',
           },
         },
@@ -214,16 +246,5 @@ export const theme = createTheme({
   },
 });
 
-// Custom CSS variables for additional styling
-export const customStyles = {
-  radiusSm: '8px',
-  radius: '12px',
-  radiusLg: '20px',
-  radiusXl: '28px',
-  shadow: '0 2px 14px rgba(0,0,0,0.07)',
-  shadowMd: '0 4px 24px rgba(0,0,0,0.08)',
-  border: 'rgba(0,0,0,0.08)',
-  border2: 'rgba(0,0,0,0.12)',
-  bg2: '#ECEAE4',
-  bg3: '#E4E1D8',
-};
+export { theme };
+export default theme;

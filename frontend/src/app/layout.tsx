@@ -12,9 +12,9 @@ const instrumentSans = Instrument_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "NexusAI - AI Model Marketplace",
-  description: "Find your perfect AI model with guided discovery. Browse 525+ models from top AI labs.",
-  keywords: ["AI", "models", "marketplace", "GPT", "Claude", "Gemini", "machine learning"],
+  title: "NexusAI — AI Model Marketplace & Agent Platform",
+  description: "Find your perfect AI model with guided discovery. Compare 525+ models from 30+ leading AI labs including OpenAI, Anthropic, Google, Meta, and more.",
+  keywords: ["AI", "models", "marketplace", "GPT", "Claude", "Gemini", "machine learning", "AI agents"],
 };
 
 export default function RootLayout({
@@ -28,7 +28,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
-          href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=Instrument+Sans:ital,wght@0,400;0,500;1,400&display=swap"
           rel="stylesheet"
         />
       </head>

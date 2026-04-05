@@ -42,12 +42,14 @@ export default function ChatPage() {
       if (guestConvId) {
         const guestMessages = GuestChatStorage.getMessages(guestConvId);
         setMessages(
-          guestMessages.map((msg) => ({
-            id: msg.id,
-            role: msg.role,
-            content: msg.content,
-            timestamp: new Date(msg.timestamp),
-          }))
+          guestMessages
+            .filter((msg) => msg.role !== 'system')
+            .map((msg) => ({
+              id: msg.id,
+              role: msg.role as 'user' | 'assistant',
+              content: msg.content,
+              timestamp: new Date(msg.timestamp),
+            }))
         );
         setConversationId(guestConvId);
       }

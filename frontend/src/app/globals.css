@@ -1,7 +1,6 @@
-/* Global styles for NexusAI - matching reference HTML design */
+/* NexusAI - Global styles (animations, resets, scrollbar) */
 
 :root {
-  /* Colors from reference HTML */
   --bg: #F4F2EE;
   --bg2: #ECEAE4;
   --bg3: #E4E1D8;
@@ -13,7 +12,7 @@
   --accent: #C8622A;
   --accent2: #A34D1E;
   --accent-lt: #FDF1EB;
-  --accent-border: rgba(200, 98, 42, 0.2);
+  --accent-border: rgba(200, 98, 42, 0.25);
   --blue: #1E4DA8;
   --blue-lt: #EBF0FC;
   --blue-border: rgba(30, 77, 168, 0.2);
@@ -23,26 +22,17 @@
   --amber-lt: #FDF5E0;
   --rose: #9B2042;
   --rose-lt: #FDEDF1;
-
-  /* Border radius */
-  --radius-sm: 8px;
+  --green: #2E9E5B;
+  --border: rgba(0, 0, 0, 0.08);
+  --border2: rgba(0, 0, 0, 0.14);
+  --border-radius-sm: 8px;
   --radius: 12px;
   --radius-lg: 20px;
   --radius-xl: 28px;
-
-  /* Shadows */
-  --shadow: 0 2px 14px rgba(0, 0, 0, 0.07);
-  --shadow-md: 0 4px 24px rgba(0, 0, 0, 0.08);
-
-  /* Borders */
-  --border: rgba(0, 0, 0, 0.08);
-  --border2: rgba(0, 0, 0, 0.12);
-}
-
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+  --shadow: 0 1px 4px rgba(0, 0, 0, 0.07), 0 4px 16px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 2px 12px rgba(0, 0, 0, 0.09), 0 8px 32px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 8px 40px rgba(0, 0, 0, 0.13);
+  --transition-speed: 0.15s;
 }
 
 html,
@@ -58,11 +48,12 @@ body {
   color: var(--text);
 }
 
-/* Animations from reference HTML */
+/* ─── Animations ─────────────────────────────────────────────── */
+
 @keyframes fadeUp {
   from {
     opacity: 0;
-    transform: translateY(20px);
+    transform: translateY(16px);
   }
   to {
     opacity: 1;
@@ -71,12 +62,8 @@ body {
 }
 
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 @keyframes slideUp {
@@ -91,130 +78,82 @@ body {
 }
 
 @keyframes pulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.5;
-  }
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
 }
 
 @keyframes micPulse {
-  0%, 100% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.1);
-  }
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.25); }
 }
 
 @keyframes float {
-  0%, 100% {
-    transform: translateY(0px);
-  }
-  50% {
-    transform: translateY(-10px);
-  }
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
 }
 
 @keyframes bounce {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-5px);
-  }
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
 }
 
 @keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
-/* Utility classes */
-.fade-up {
-  animation: fadeUp 0.4s ease;
+@keyframes sqFadeIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-.fade-in {
-  animation: fadeIn 0.3s ease;
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
 }
 
-.slide-up {
-  animation: slideUp 0.3s ease;
+@keyframes shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
 }
 
-/* Scrollbar styling */
+@keyframes glowPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(200, 98, 42, 0); }
+  50% { box-shadow: 0 0 0 6px rgba(200, 98, 42, 0.08); }
+}
+
+@keyframes dotPulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.4); opacity: 0.6; }
+}
+
+/* ─── Scrollbar ──────────────────────────────────────────────── */
+
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 5px;
+  height: 5px;
 }
-
 ::-webkit-scrollbar-track {
-  background: var(--bg2);
-  border-radius: 4px;
+  background: transparent;
 }
-
 ::-webkit-scrollbar-thumb {
-  background: var(--border2);
-  border-radius: 4px;
+  background: rgba(0,0,0,0.14);
+  border-radius: 10px;
 }
-
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--text3);
+  background: #9E9B93;
 }
 
-/* Focus visible styles for accessibility */
+/* ─── Focus visible (accessibility) ──────────────────────────── */
+
 *:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid #C8622A;
   outline-offset: 2px;
 }
 
-/* Typography helpers */
-.font-syne {
-  font-family: 'Syne', sans-serif;
-}
+/* ─── Selection ──────────────────────────────────────────────── */
 
-/* Badge colors */
-.badge-hot {
-  background: linear-gradient(135deg, #FF6B6B, #FF4757);
-  color: white;
+::selection {
+  background: rgba(200, 98, 42, 0.15);
+  color: #1C1A16;
 }
-
-.badge-new {
-  background: var(--teal-lt);
-  color: var(--teal);
-  border: 1px solid rgba(10, 94, 73, 0.2);
-}
-
-.badge-open {
-  background: var(--blue-lt);
-  color: var(--blue);
-  border: 1px solid var(--blue-border);
-}
-
-/* Tag colors */
-.tag-blue {
-  background: var(--blue-lt);
-  color: var(--blue);
-}
-
-.tag-teal {
-  background: var(--teal-lt);
-  color: var(--teal);
-}
-
-.tag-amber {
-  background: var(--amber-lt);
-  color: var(--amber);
-}
-
-.tag-rose {
-  background: var(--rose-lt);
-  color: var(--rose);
-}
-

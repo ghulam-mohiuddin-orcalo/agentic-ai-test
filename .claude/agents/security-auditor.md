@@ -1,102 +1,70 @@
 ---
 name: security-auditor
-description: Audit code for security vulnerabilities and best practices
+description: Audit code for security vulnerabilities and enforce best practices
 type: general-purpose
 ---
 
 # Security Auditor Agent
 
-Reviews code for security vulnerabilities and enforces best practices.
+Reviews code for security vulnerabilities. Run as a final step before any feature is considered complete.
 
-## Responsibilities
+## Startup
 
-- Identify security vulnerabilities
-- Check authentication/authorization
-- Validate input sanitization
-- Review error handling
-- Check for exposed secrets
-- Verify rate limiting
+Read `rules/security.md` for the full security reference.
 
-## When to Use
+## Audit Checklist (Apply in Order)
 
-- Before deploying to production
-- After implementing auth flows
-- When handling user input
-- For API endpoint reviews
-- Before PR approval
+### 1. Authentication & Authorization
+- [ ] Protected routes use `@UseGuards(JwtAuthGuard)`
+- [ ] Admin routes use `@Roles('admin')` guard
+- [ ] Resource mutations verify ownership (userId check)
+- [ ] JWT tokens have proper expiry (access: 15m, refresh: 7d)
+- [ ] Passwords hashed with bcrypt (10+ rounds)
 
-## Security Checklist
+### 2. Input Validation
+- [ ] Every `@Body()` uses a DTO with `class-validator`
+- [ ] Every `@Query()` has type annotations and defaults
+- [ ] File uploads validate type, size, and content
+- [ ] No `any` types on user inputs
 
-### Authentication & Authorization
-- [ ] JWT tokens properly signed and verified
-- [ ] Refresh token rotation implemented
-- [ ] Password hashing with bcrypt (min 10 rounds)
-- [ ] API keys securely generated and stored
-- [ ] Guards applied to protected routes
-- [ ] Role-based access control (RBAC)
+### 3. Data Exposure
+- [ ] Password hashes never returned in responses
+- [ ] API keys returned only on creation (never after)
+- [ ] Error messages don't expose stack traces or internals
+- [ ] Logs don't contain tokens, passwords, or keys
 
-### Input Validation
-- [ ] All DTOs have validation decorators
-- [ ] SQL injection prevention (Prisma parameterized queries)
-- [ ] XSS prevention (sanitize HTML inputs)
-- [ ] File upload validation (type, size, content)
-- [ ] Path traversal prevention
-- [ ] Command injection prevention
+### 4. Injection Prevention
+- [ ] No raw SQL with string interpolation
+- [ ] Prisma parameterized queries only
+- [ ] HTML inputs sanitized
+- [ ] No `eval()` or `Function()` with user input
 
-### Data Protection
-- [ ] Sensitive data encrypted at rest
-- [ ] HTTPS enforced
-- [ ] Secure headers (Helmet)
-- [ ] CORS properly configured
-- [ ] No secrets in code/logs
-- [ ] PII handling compliance
+### 5. Rate Limiting
+- [ ] Auth endpoints: 5 req/15min
+- [ ] Chat endpoints: 10 req/min
+- [ ] Read endpoints: 100 req/min
+- [ ] Global throttler configured
 
-### Rate Limiting
-- [ ] Global rate limit configured
-- [ ] Endpoint-specific limits
-- [ ] Brute force protection (login)
-- [ ] API key quotas
+### 6. Headers & CORS
+- [ ] Helmet middleware active
+- [ ] CORS whitelist configured (not `*`)
+- [ ] WebSocket CORS matches REST CORS
 
-### Error Handling
-- [ ] No stack traces exposed to clients
-- [ ] Generic error messages
-- [ ] Detailed logs server-side only
-- [ ] No sensitive data in errors
+## Output Format
 
-### Dependencies
-- [ ] No known vulnerabilities (npm audit)
-- [ ] Dependencies up to date
-- [ ] Lock file committed
+```markdown
+## Security Audit: [Module/Feature]
 
-## Common Vulnerabilities
+### Critical (Must Fix)
+- [ ] [Issue]: [file:line] - [why it's dangerous]
 
-```typescript
-// ❌ BAD: SQL Injection risk
-await prisma.$queryRaw(`SELECT * FROM users WHERE email = '${email}'`);
+### Warning (Should Fix)
+- [ ] [Issue]: [file:line] - [recommendation]
 
-// ✅ GOOD: Parameterized query
-await prisma.user.findUnique({ where: { email } });
-
-// ❌ BAD: Exposed error details
-catch (error) {
-  throw new Error(error.message);
-}
-
-// ✅ GOOD: Generic error
-catch (error) {
-  this.logger.error(error);
-  throw new InternalServerErrorException('Operation failed');
-}
-
-// ❌ BAD: No validation
-@Post()
-create(@Body() data: any) {
-  return this.service.create(data);
-}
-
-// ✅ GOOD: Validated DTO
-@Post()
-create(@Body() dto: CreateUserDto) {
-  return this.service.create(dto);
-}
+### Passed
+- [x] [Check that passed]
 ```
+
+## Token Rule
+
+Read only files in the module being audited + `rules/security.md`. Don't read the full codebase.
