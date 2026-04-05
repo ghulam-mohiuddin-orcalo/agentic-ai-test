@@ -9,7 +9,7 @@ export const getSocket = (): Socket => {
       autoConnect: false,
       auth: (cb) => {
         // Get token from localStorage
-        const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+        const token = typeof window !== 'undefined' ? localStorage.getItem('nexusai_token') : null;
         cb({ token });
       },
       reconnection: true,

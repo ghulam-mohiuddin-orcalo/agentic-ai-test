@@ -28,10 +28,10 @@ import { useAppDispatch } from '@/store/hooks';
 import { logout } from '@/store/slices/authSlice';
 
 const NAV_LINKS = [
-  { label: 'Marketplace', href: '/marketplace' },
   { label: 'Chat Hub', href: '/chat' },
+  { label: 'Marketplace', href: '/marketplace' },
+  { label: 'Discover New', href: '/discover' },
   { label: 'Agents', href: '/agents' },
-  { label: 'Discover', href: '/discover' },
 ];
 
 const LANGUAGES = [
@@ -39,7 +39,16 @@ const LANGUAGES = [
   { code: 'ES', label: 'Español' },
   { code: 'FR', label: 'Français' },
   { code: 'DE', label: 'Deutsch' },
+  { code: 'IT', label: 'Italiano' },
+  { code: 'PT', label: 'Português' },
+  { code: 'JA', label: '日本語' },
+  { code: 'KO', label: '한국어' },
   { code: 'ZH', label: '中文' },
+  { code: 'AR', label: 'العربية' },
+  { code: 'HI', label: 'हिन्दी' },
+  { code: 'RU', label: 'Русский' },
+  { code: 'NL', label: 'Nederlands' },
+  { code: 'TR', label: 'Türkçe' },
 ];
 
 export default function Navbar() {
@@ -105,20 +114,55 @@ export default function Navbar() {
       >
         <Toolbar sx={{ px: { xs: 2, md: 4 }, justifyContent: 'space-between' }}>
           {/* Logo */}
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <Link href="/" style={{ textDecoration: 'none' }}>
-              <Typography
-                variant="h3"
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Box
+                component="span"
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: 32,
+                  height: 32,
+                  borderRadius: '8px',
+                  background: 'linear-gradient(135deg, #C8622A 0%, #E8854A 100%)',
+                  flexShrink: 0,
+                }}
+              >
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M12 2L2 7V17L12 22L22 17V7L12 2Z"
+                    stroke="white"
+                    strokeWidth="1.5"
+                    strokeLinejoin="round"
+                    fill="none"
+                  />
+                  <path
+                    d="M12 8L8 10.5V15.5L12 18L16 15.5V10.5L12 8Z"
+                    fill="white"
+                    fillOpacity="0.9"
+                  />
+                  <circle cx="12" cy="12" r="2" fill="white" />
+                </svg>
+              </Box>
+              <Box
+                component="span"
                 sx={{
                   fontFamily: "'Syne', sans-serif",
                   fontWeight: 700,
-                  fontSize: '1.25rem',
+                  fontSize: '1.4rem',
+                  letterSpacing: '-0.03em',
                   color: 'text.primary',
-                  letterSpacing: '-0.02em',
                 }}
               >
                 Nexus<span style={{ color: '#C8622A' }}>AI</span>
-              </Typography>
+              </Box>
             </Link>
           </Box>
 
@@ -133,7 +177,7 @@ export default function Navbar() {
                     component={Link}
                     href={link.href}
                     sx={{
-                      color: isActive ? '#C8622A' : 'text.secondary',
+                      color: isActive ? 'primary.main' : 'text.secondary',
                       fontWeight: isActive ? 700 : 500,
                       fontSize: '0.9375rem',
                       px: 2,
@@ -148,11 +192,11 @@ export default function Navbar() {
                         transform: 'translateX(-50%)',
                         width: '60%',
                         height: 2,
-                        bgcolor: '#C8622A',
+                        bgcolor: 'primary.main',
                         borderRadius: '2px 2px 0 0',
                       } : {},
                       '&:hover': {
-                        color: isActive ? '#C8622A' : 'text.primary',
+                        color: isActive ? 'primary.main' : 'text.primary',
                         bgcolor: isActive ? 'rgba(200,98,42,0.06)' : 'rgba(0,0,0,0.04)',
                       },
                     }}
@@ -235,7 +279,7 @@ export default function Navbar() {
                         sx={{
                           width: 28,
                           height: 28,
-                          bgcolor: '#C8622A',
+                          bgcolor: 'primary.main',
                           fontSize: '0.75rem',
                           fontWeight: 600,
                         }}
@@ -310,7 +354,7 @@ export default function Navbar() {
                       sx={{
                         fontSize: '0.9375rem',
                         py: 1.5,
-                        color: '#9B2042',
+                        color: 'error.main',
                         '&:hover': {
                           bgcolor: 'rgba(155, 32, 66, 0.08)',
                         },
@@ -337,7 +381,7 @@ export default function Navbar() {
                       },
                     }}
                   >
-                    Log in
+                    Sign in
                   </Button>
                   <Button
                     component={Link}
@@ -353,7 +397,7 @@ export default function Navbar() {
                       borderRadius: '8px',
                     }}
                   >
-                    Get started
+                    Get Started
                   </Button>
                 </>
               )}
@@ -409,7 +453,7 @@ export default function Navbar() {
                     primary={link.label}
                     primaryTypographyProps={{
                       fontWeight: isActive ? 700 : 500,
-                      color: isActive ? '#C8622A' : 'inherit',
+                      color: isActive ? 'primary.main' : 'inherit',
                     }}
                   />
                 </ListItemButton>
@@ -461,10 +505,10 @@ export default function Navbar() {
                 sx={{
                   textTransform: 'none',
                   justifyContent: 'flex-start',
-                  color: '#9B2042',
-                  borderColor: '#9B2042',
+                  color: 'error.main',
+                  borderColor: 'error.main',
                   '&:hover': {
-                    borderColor: '#9B2042',
+                    borderColor: 'error.main',
                     bgcolor: 'rgba(155, 32, 66, 0.08)',
                   },
                 }}
@@ -481,7 +525,7 @@ export default function Navbar() {
                 fullWidth
                 onClick={() => setMobileOpen(false)}
               >
-                Log in
+                Sign in
               </Button>
               <Button
                 component={Link}
@@ -490,7 +534,7 @@ export default function Navbar() {
                 fullWidth
                 onClick={() => setMobileOpen(false)}
               >
-                Get started
+                Get Started
               </Button>
             </>
           )}

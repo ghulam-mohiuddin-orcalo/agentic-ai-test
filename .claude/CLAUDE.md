@@ -8,7 +8,7 @@
 **NexusAI** = Full-stack AI marketplace + chat platform + agent builder.
 - **Backend**: NestJS 10 + TypeScript + Prisma + PostgreSQL + Redis + Socket.IO
 - **Frontend**: Next.js 16 + React 19 + Redux Toolkit + MUI + Tailwind
-- **Infra**: Docker Compose (PostgreSQL 16, Redis 7, backend, frontend)
+- **Infra**: Docker Compose for infrastructure only (PostgreSQL 16, Redis 7)
 
 ## Agent Routing Table (READ FIRST)
 
@@ -127,7 +127,7 @@ When you receive a task, match it to the correct flow below. Do NOT read all fil
 | `/test-module <name>` | Run module tests | After implementation |
 | `/api-doc [--serve]` | Swagger docs | After API changes |
 | `/lint` | ESLint + Prettier | Before commits |
-| `/docker-up` | Start full stack | Local development |
+| `/docker-up` | Start infrastructure (PostgreSQL + Redis) | Local development |
 
 ## Token Optimization Rules
 
@@ -186,7 +186,7 @@ Model ──< Usage
 1. **No real AI provider integration** - ChatGateway and AgentsService responses are simulated
 2. **No seed file** - `prisma/seed.ts` missing, marketplace has no backend data
 3. **No migrations** - Only schema.prisma exists, no migrations/ folder
-4. **No health endpoint** - Docker healthcheck targets `/api/v1/health` but it doesn't exist
+4. **No health endpoint** - `/api/v1/health` referenced but doesn't exist
 5. **No tests** - Zero test files in the project
 6. **Redis unused** - Installed but not configured in app.module.ts
 7. **S3 unused** - Dependency declared but no code uses it
@@ -197,10 +197,14 @@ Model ──< Usage
 ## Commands
 
 ```bash
-# Development
-npm run dev                    # Root: runs both backend + frontend
+# Development (run backend and frontend separately)
 cd backend && npm run start:dev
 cd frontend && npm run dev
+
+# Infrastructure (Docker)
+docker compose up -d            # Start PostgreSQL + Redis
+docker compose down             # Stop infrastructure
+docker compose down -v          # Stop and delete volumes
 
 # Database
 cd backend && npx prisma migrate dev --name <desc>
@@ -210,10 +214,6 @@ cd backend && npx prisma studio
 # Testing
 cd backend && npm test
 cd backend && npm run test:e2e
-
-# Docker
-docker-compose up --build
-docker-compose down -v
 ```
 
 ## Golden Rules
@@ -226,5 +226,5 @@ docker-compose down -v
 
 ---
 
-**Last Updated**: 2026-04-04
+**Last Updated**: 2026-04-05
 **Stack**: NestJS 10 / Next.js 16 / Node 22 / PostgreSQL 16 / Redis 7

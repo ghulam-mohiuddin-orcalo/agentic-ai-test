@@ -1,8 +1,7 @@
 'use client';
 
-import { Box, Container, Typography } from '@mui/material';
-
-const FOOTER_LINKS = ['Models', 'Research', 'API', 'Privacy', 'Terms'];
+import { Box, Container, Typography, Button, Link } from '@mui/material';
+import { FOOTER_MODEL_CATALOG } from '@/lib/constants';
 
 export default function Footer() {
   return (
@@ -11,46 +10,39 @@ export default function Footer() {
       sx={{
         bgcolor: '#1C1A16',
         borderTop: '1px solid rgba(255,255,255,0.06)',
-        py: 2.25,
+        pt: 6,
+        pb: 3,
       }}
     >
       <Container maxWidth="lg">
+
+
+        {/* Bottom bar */}
         <Box
           sx={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
             flexDirection: { xs: 'column', sm: 'row' },
-            gap: { xs: 2, sm: 0 },
+            gap: { xs: 1, sm: 0 },
           }}
         >
-          {/* Brand */}
-          <Typography
-            variant="body2"
-            sx={{
-              color: 'rgba(255,255,255,0.55)',
-              fontWeight: 500,
-              fontSize: '0.875rem',
-            }}
-          >
-            NexusAI Model Marketplace
+          <Typography sx={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.3)' }}>
+            &copy; {new Date().getFullYear()} NexusAI. All rights reserved.
           </Typography>
-
-          {/* Links */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-            {FOOTER_LINKS.map((link) => (
+          <Box sx={{ display: 'flex', gap: 2.5 }}>
+            {['Twitter', 'GitHub', 'Discord', 'LinkedIn'].map((social) => (
               <Typography
-                key={link}
-                variant="body2"
+                key={social}
                 sx={{
-                  color: 'rgba(255,255,255,0.4)',
+                  fontSize: '0.75rem',
+                  color: 'rgba(255,255,255,0.3)',
                   cursor: 'pointer',
-                  fontSize: '0.875rem',
                   transition: 'color 0.15s ease',
-                  '&:hover': { color: '#fff' },
+                  '&:hover': { color: 'rgba(255,255,255,0.7)' },
                 }}
               >
-                {link}
+                {social}
               </Typography>
             ))}
           </Box>

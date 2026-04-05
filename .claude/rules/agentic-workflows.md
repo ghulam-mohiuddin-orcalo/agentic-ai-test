@@ -30,7 +30,7 @@ Quick-reference for which agents and skills to chain for each task type.
 | `/test-module <name>` | Run module tests |
 | `/api-doc [--serve]` | Swagger docs |
 | `/lint` | ESLint + Prettier |
-| `/docker-up` | Start full stack |
+| `/docker-up` | Start infrastructure (PostgreSQL + Redis) |
 
 ## Workflow 1: New Full-Stack Feature
 
@@ -110,7 +110,7 @@ database-expert (hotspot analysis)
 
 ```
 devops (directly)
-  → /docker-up (test locally)
+  → docker compose up -d (start infrastructure)
 ```
 
 ## Routing Heuristic

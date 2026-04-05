@@ -1,6 +1,6 @@
 'use client';
 
-import { Box, Typography, Chip } from '@mui/material';
+import { Box, Typography } from '@mui/material';
 import { Star } from '@mui/icons-material';
 import { ModelData } from '@/components/models/ModelCard';
 
@@ -34,19 +34,21 @@ export default function MarketplaceModelCard({ model, onClick }: Props) {
     <Box
       onClick={() => onClick?.(model)}
       sx={{
-        bgcolor: 'var(--card)',
-        border: '1px solid var(--border)',
-        borderRadius: 'var(--radius)',
+        bgcolor: 'background.paper',
+        border: '1px solid',
+        borderColor: 'divider',
+        borderRadius: '20px',
         p: 2,
         cursor: 'pointer',
         display: 'flex',
         flexDirection: 'column',
         gap: 1,
-        transition: 'all 0.18s ease',
+        transition: 'all 0.22s',
+        boxShadow: 1,
         '&:hover': {
-          borderColor: 'var(--accent-border)',
-          boxShadow: 'var(--shadow-md)',
-          transform: 'translateY(-2px)',
+          borderColor: (t) => t.palette.custom.border2,
+          boxShadow: 2,
+          transform: 'translateY(-3px)',
         },
       }}
     >
@@ -71,10 +73,12 @@ export default function MarketplaceModelCard({ model, onClick }: Props) {
           <Box sx={{ minWidth: 0 }}>
             <Typography
               sx={{
-                fontWeight: 700,
+                fontFamily: "'Syne', sans-serif",
+                fontWeight: 600,
                 fontSize: '0.875rem',
-                color: 'var(--text)',
+                color: 'text.primary',
                 lineHeight: 1.2,
+                letterSpacing: '-0.02em',
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
@@ -82,7 +86,7 @@ export default function MarketplaceModelCard({ model, onClick }: Props) {
             >
               {model.name}
             </Typography>
-            <Typography sx={{ fontSize: '0.6875rem', color: 'var(--text3)', lineHeight: 1.3 }}>
+            <Typography sx={{ fontSize: '0.6875rem', color: 'text.disabled', lineHeight: 1.3 }}>
               {model.org}
             </Typography>
           </Box>
@@ -110,8 +114,8 @@ export default function MarketplaceModelCard({ model, onClick }: Props) {
       <Typography
         sx={{
           fontSize: '0.8125rem',
-          color: 'var(--text2)',
-          lineHeight: 1.5,
+          color: 'text.secondary',
+          lineHeight: 1.55,
           display: '-webkit-box',
           WebkitLineClamp: 2,
           WebkitBoxOrient: 'vertical',
@@ -145,13 +149,22 @@ export default function MarketplaceModelCard({ model, onClick }: Props) {
       </Box>
 
       {/* Footer */}
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pt: 0.5 }}>
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          pt: 0.5,
+          borderTop: '1px solid',
+          borderTopColor: 'divider',
+        }}
+      >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.375 }}>
-          <Star sx={{ fontSize: 12, color: '#F5A623' }} />
-          <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text)' }}>
+          <Star sx={{ fontSize: 12, color: (t: any) => t.palette.custom.star }} />
+          <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, color: 'text.primary' }}>
             {model.rating.toFixed(1)}
           </Typography>
-          <Typography sx={{ fontSize: '0.6875rem', color: 'var(--text3)' }}>
+          <Typography sx={{ fontSize: '0.6875rem', color: 'text.disabled' }}>
             ({model.reviews.toLocaleString()})
           </Typography>
         </Box>
@@ -159,26 +172,29 @@ export default function MarketplaceModelCard({ model, onClick }: Props) {
           <Typography
             sx={{
               fontSize: '0.75rem',
-              fontWeight: 700,
-              color: model.price === 'Free' ? 'var(--teal)' : 'var(--text)',
+              fontWeight: 600,
+              color: model.price === 'Free' ? 'success.main' : 'text.primary',
             }}
           >
             {model.price}
           </Typography>
           <Box
+            component="a"
+            href="/chat"
+            onClick={(e: React.MouseEvent) => e.stopPropagation()}
             sx={{
               px: 1,
               py: 0.375,
               borderRadius: '6px',
-              bgcolor: 'var(--accent)',
+              bgcolor: 'primary.main',
               color: '#fff',
               fontSize: '0.6875rem',
               fontWeight: 600,
-              cursor: 'pointer',
-              '&:hover': { bgcolor: 'var(--accent2)' },
+              textDecoration: 'none',
+              '&:hover': { bgcolor: 'primary.dark' },
             }}
           >
-            Use it →
+            How to Use →
           </Box>
         </Box>
       </Box>

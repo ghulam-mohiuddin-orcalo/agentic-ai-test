@@ -1,15 +1,23 @@
 'use client';
 
-import { Box, Typography, Paper } from '@mui/material';
+import { Box, Typography } from '@mui/material';
 import { BUILDER_FEATURES } from '@/lib/constants';
 
 export default function BuiltForBuilders() {
   return (
     <Box>
-      <Typography variant="h2" sx={{ fontSize: '1.5rem', mb: 1 }}>
+      <Typography
+        sx={{
+          fontFamily: "'Syne', sans-serif",
+          fontSize: '1.9rem',
+          fontWeight: 700,
+          letterSpacing: '-0.03em',
+          mb: 1,
+        }}
+      >
         Built for every builder
       </Typography>
-      <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
+      <Typography sx={{ fontSize: '0.95rem', color: 'text.secondary', mb: '2rem' }}>
         Whether you're a solo developer or enterprise team
       </Typography>
 
@@ -25,26 +33,45 @@ export default function BuiltForBuilders() {
         }}
       >
         {BUILDER_FEATURES.map((feature, i) => (
-          <Box key={i}>
-            <Box
-              sx={{
-                width: 44,
-                height: 44,
-                borderRadius: '12px',
-                bgcolor: 'background.default',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '1.5rem',
-                mb: 1.5,
-              }}
-            >
+          <Box
+            key={i}
+            sx={{
+              bgcolor: 'background.paper',
+              border: '1px solid',
+              borderColor: 'divider',
+              borderRadius: '20px',
+              padding: '1.5rem',
+              cursor: 'pointer',
+              transition: 'all 0.22s',
+              boxShadow: 1,
+              '&:hover': {
+                transform: 'translateY(-3px)',
+                boxShadow: 2,
+                borderColor: (t: any) => t.palette.custom.border2,
+              },
+            }}
+          >
+            <Box sx={{ fontSize: '2rem', mb: 1.25, display: 'block' }}>
               {feature.icon}
             </Box>
-            <Typography variant="h4" sx={{ mb: 0.75 }}>
+            <Typography
+              sx={{
+                fontFamily: "'Syne', sans-serif",
+                fontSize: '1rem',
+                fontWeight: 600,
+                letterSpacing: '-0.02em',
+                mb: 0.5,
+              }}
+            >
               {feature.title}
             </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.6 }}>
+            <Typography
+              sx={{
+                fontSize: '0.83rem',
+                color: 'text.secondary',
+                lineHeight: 1.55,
+              }}
+            >
               {feature.desc}
             </Typography>
           </Box>

@@ -1,60 +1,74 @@
 'use client';
 
-import { Box, Typography, Button } from '@mui/material';
+import { Box, Typography } from '@mui/material';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
-import { AI_LABS } from '@/lib/constants';
+import { BROWSE_BY_LAB_DATA } from '@/lib/constants';
 
 export default function BrowseByLab() {
+  const totalLabs = BROWSE_BY_LAB_DATA.length;
+
   return (
-    <Box sx={{ py: 6 }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
-        <Typography variant="h2" sx={{ fontSize: '1.5rem' }}>
+    <Box>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: '2rem' }}>
+        <Typography
+          sx={{
+            fontFamily: "'Syne', sans-serif",
+            fontSize: '1.9rem',
+            fontWeight: 700,
+            letterSpacing: '-0.03em',
+          }}
+        >
           Browse by AI Lab
         </Typography>
-        <Button
-          endIcon={<ArrowForwardIcon />}
+        <Box
+          component="a"
+          href="/marketplace"
           sx={{
+            fontSize: '0.85rem',
             color: 'primary.main',
             fontWeight: 500,
-            fontSize: '0.875rem',
-            '&:hover': { bgcolor: 'primary.light' },
+            textDecoration: 'none',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 0.5,
+            '&:hover': { textDecoration: 'underline' },
           }}
-          href="/marketplace"
         >
-          All labs
-        </Button>
+          See all labs <ArrowForwardIcon sx={{ fontSize: 14 }} />
+        </Box>
       </Box>
 
       <Box
         sx={{
           display: 'grid',
           gridTemplateColumns: {
-            xs: 'repeat(3, 1fr)',
-            sm: 'repeat(5, 1fr)',
-            md: 'repeat(8, 1fr)',
+            xs: 'repeat(2, 1fr)',
+            sm: 'repeat(3, 1fr)',
+            md: 'repeat(4, 1fr)',
           },
-          gap: 1.5,
+          gap: 2,
         }}
       >
-        {AI_LABS.map((lab) => (
+        {BROWSE_BY_LAB_DATA.map((lab) => (
           <Box
             key={lab.id}
             sx={{
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
-              gap: 1,
+              gap: 0.75,
               p: 2,
-              borderRadius: 2,
+              borderRadius: '20px',
               bgcolor: 'background.paper',
               border: '1px solid',
               borderColor: 'divider',
               cursor: 'pointer',
-              transition: 'all 0.2s ease',
+              transition: 'all 0.22s',
+              boxShadow: 1,
               '&:hover': {
-                borderColor: 'primary.main',
                 transform: 'translateY(-2px)',
                 boxShadow: 2,
+                borderColor: (t: any) => t.palette.custom.border2,
               },
             }}
           >
@@ -62,7 +76,7 @@ export default function BrowseByLab() {
               sx={{
                 width: 44,
                 height: 44,
-                borderRadius: '12px',
+                borderRadius: '11px',
                 bgcolor: 'background.default',
                 display: 'flex',
                 alignItems: 'center',
@@ -73,34 +87,43 @@ export default function BrowseByLab() {
               {lab.icon}
             </Box>
             <Typography
-              variant="caption"
               sx={{
                 fontWeight: 600,
-                fontSize: '0.6875rem',
-                color: 'text.secondary',
+                fontSize: '0.75rem',
+                color: 'text.primary',
                 textAlign: 'center',
                 lineHeight: 1.3,
               }}
             >
-              {lab.name.split(' ')[0]}
+              {lab.name}
+            </Typography>
+            <Typography
+              sx={{
+                fontSize: '0.625rem',
+                color: 'text.disabled',
+                lineHeight: 1.3,
+                textAlign: 'center',
+              }}
+            >
+              {lab.modelCount} models · {lab.upcoming}
             </Typography>
           </Box>
         ))}
 
-        {/* Browse All card */}
+        {/* All Labs card */}
         <Box
           sx={{
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            gap: 1,
+            gap: 0.75,
             p: 2,
-            borderRadius: 2,
+            borderRadius: '20px',
             bgcolor: 'primary.light',
-            border: '1px solid',
-            borderColor: 'rgba(200,98,42,0.2)',
+            border: '1.5px dashed',
+            borderColor: (t: any) => t.palette.custom.accentBorder,
             cursor: 'pointer',
-            transition: 'all 0.2s ease',
+            transition: 'all 0.22s',
             '&:hover': {
               transform: 'translateY(-2px)',
               boxShadow: 2,
@@ -111,8 +134,8 @@ export default function BrowseByLab() {
             sx={{
               width: 44,
               height: 44,
-              borderRadius: '12px',
-              bgcolor: 'rgba(200,98,42,0.15)',
+              borderRadius: '11px',
+              bgcolor: 'rgba(200,98,42,0.12)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -122,16 +145,26 @@ export default function BrowseByLab() {
             🌐
           </Box>
           <Typography
-            variant="caption"
             sx={{
               fontWeight: 600,
-              fontSize: '0.6875rem',
+              fontSize: '0.75rem',
               color: 'primary.main',
               textAlign: 'center',
               lineHeight: 1.3,
             }}
           >
-            All 28 Labs
+            All {totalLabs} Labs
+          </Typography>
+          <Typography
+            sx={{
+              fontSize: '0.625rem',
+              color: 'primary.main',
+              lineHeight: 1.3,
+              textAlign: 'center',
+              opacity: 0.7,
+            }}
+          >
+            Explore all
           </Typography>
         </Box>
       </Box>

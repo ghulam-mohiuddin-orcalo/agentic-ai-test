@@ -9,12 +9,15 @@ import {
   Divider,
   Radio,
   RadioGroup,
+  Rating,
 } from '@mui/material';
 
 export interface FilterState {
   providers: string[];
   types: string[];
   priceRange: [number, number];
+  pricingModel: string;
+  minRating: number;
   license: string;
   contextSize: string;
 }
@@ -47,6 +50,13 @@ const CONTEXT_SIZES = [
   { value: '32k', label: '32K+' },
   { value: '128k', label: '128K+' },
   { value: '1m', label: '1M+' },
+];
+
+const PRICING_MODEL_OPTIONS = [
+  { value: 'any', label: 'Any' },
+  { value: 'free', label: 'Free' },
+  { value: 'freemium', label: 'Freemium' },
+  { value: 'paid', label: 'Paid' },
 ];
 
 const LICENSE_OPTIONS = [
@@ -186,6 +196,40 @@ export default function MarketplaceFilterSidebar({ filters, onChange }: Props) {
             sx={checkboxSx}
           />
         ))}
+      </Box>
+
+      <Divider sx={{ borderColor: 'var(--border)' }} />
+
+      {/* Pricing Model */}
+      <Box sx={{ p: 2, pb: 1.5 }}>
+        <SectionHeader label="PRICING MODEL" />
+        <RadioGroup
+          value={filters.pricingModel}
+          onChange={(e) => onChange({ ...filters, pricingModel: e.target.value })}
+        >
+          {PRICING_MODEL_OPTIONS.map(({ value, label }) => (
+            <FormControlLabel key={value} value={value} control={<Radio size="small" />} label={label} sx={radioSx} />
+          ))}
+        </RadioGroup>
+      </Box>
+
+      <Divider sx={{ borderColor: 'var(--border)' }} />
+
+      {/* Min Rating */}
+      <Box sx={{ p: 2, pb: 1.5 }}>
+        <SectionHeader label="MIN RATING" />
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Rating
+            value={filters.minRating}
+            onChange={(_, v) => onChange({ ...filters, minRating: v ?? 0 })}
+            precision={0.5}
+            size="small"
+            sx={{ color: '#F5A623' }}
+          />
+          <Typography sx={{ fontSize: '0.75rem', color: 'var(--text3)' }}>
+            {filters.minRating > 0 ? `${filters.minRating}+` : 'Any'}
+          </Typography>
+        </Box>
       </Box>
 
       <Divider sx={{ borderColor: 'var(--border)' }} />
