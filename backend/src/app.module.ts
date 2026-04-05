@@ -9,6 +9,7 @@ import { ChatModule } from './modules/chat/chat.module';
 import { AgentsModule } from './modules/agents/agents.module';
 import { UsageModule } from './modules/usage/usage.module';
 import { HealthModule } from './modules/health/health.module';
+import { WorkflowModule } from './modules/workflow/workflow.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { HealthModule } from './modules/health/health.module';
     AgentsModule,
     UsageModule,
     HealthModule,
+    WorkflowModule,
   ],
 })
 export class AppModule {}

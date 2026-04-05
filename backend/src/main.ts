@@ -37,6 +37,7 @@ async function bootstrap() {
     .addTag('Auth', 'Authentication endpoints')
     .addTag('Users', 'User management and API keys')
     .addTag('Models', 'AI model catalog and reviews')
+    .addTag('Workflow', 'JIRA-powered agentic workflow system')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
