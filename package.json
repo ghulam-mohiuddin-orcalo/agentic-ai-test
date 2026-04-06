@@ -1,0 +1,27 @@
+{
+  "name": "nexusai",
+  "version": "1.0.0",
+  "description": "> **AI Model Marketplace & Chat Platform** - A comprehensive platform for discovering, comparing, and interacting with multiple AI models from leading providers.",
+  "main": "index.js",
+  "scripts": {
+    "dev": "concurrently --names \"BACKEND,FRONTEND\" --prefix-colors \"blue,green\" \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "npm run start:dev --prefix backend",
+    "dev:frontend": "npm run dev --prefix frontend",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ghulam-mohiuddin-orcalo/agentic-ai-test.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/ghulam-mohiuddin-orcalo/agentic-ai-test/issues"
+  },
+  "homepage": "https://github.com/ghulam-mohiuddin-orcalo/agentic-ai-test#readme",
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}
