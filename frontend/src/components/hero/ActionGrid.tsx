@@ -1,91 +1,36 @@
 'use client';
 
 import { Box, Paper, Typography } from '@mui/material';
+import { useRouter } from 'next/navigation';
 
 interface Action {
   emoji: string;
   label: string;
-  prompt: string;
 }
 
 const ACTIONS: Action[] = [
-  {
-    emoji: '✍️',
-    label: 'Write an article',
-    prompt: 'Help me write a professional article about',
-  },
-  {
-    emoji: '💻',
-    label: 'Debug code',
-    prompt: 'Help me debug this code:',
-  },
-  {
-    emoji: '🎨',
-    label: 'Generate image',
-    prompt: 'Create an image of',
-  },
-  {
-    emoji: '📊',
-    label: 'Analyze data',
-    prompt: 'Analyze this data and provide insights:',
-  },
-  {
-    emoji: '🔍',
-    label: 'Research topic',
-    prompt: 'Research and summarize information about',
-  },
-  {
-    emoji: '💡',
-    label: 'Brainstorm ideas',
-    prompt: 'Help me brainstorm ideas for',
-  },
-  {
-    emoji: '📝',
-    label: 'Summarize text',
-    prompt: 'Summarize this text:',
-  },
-  {
-    emoji: '🌐',
-    label: 'Translate',
-    prompt: 'Translate this to',
-  },
-  {
-    emoji: '🎯',
-    label: 'Create plan',
-    prompt: 'Create a detailed plan for',
-  },
-  {
-    emoji: '📧',
-    label: 'Write email',
-    prompt: 'Help me write a professional email about',
-  },
-  {
-    emoji: '🤖',
-    label: 'Build agent',
-    prompt: 'Help me build an AI agent that can',
-  },
-  {
-    emoji: '📚',
-    label: 'Explain concept',
-    prompt: 'Explain this concept in simple terms:',
-  },
-  {
-    emoji: '🔧',
-    label: 'Fix bug',
-    prompt: 'Help me fix this bug:',
-  },
-  {
-    emoji: '🎓',
-    label: 'Learn skill',
-    prompt: 'Teach me how to',
-  },
+  { emoji: '🎨', label: 'Create image' },
+  { emoji: '🎵', label: 'Generate Audio' },
+  { emoji: '📝', label: 'Summarize text' },
+  { emoji: '💻', label: 'Write code' },
+  { emoji: '📊', label: 'Analyze data' },
+  { emoji: '🌐', label: 'Translate' },
+  { emoji: '🔍', label: 'Research topic' },
+  { emoji: '✈️', label: 'Plan trip' },
+  { emoji: '📧', label: 'Draft email' },
+  { emoji: '🐛', label: 'Debug code' },
+  { emoji: '🖌️', label: 'Design UI' },
+  { emoji: '📖', label: 'Write story' },
+  { emoji: '📚', label: 'Learn concept' },
+  { emoji: '⚖️', label: 'Compare options' },
 ];
 
 interface ActionGridProps {
-  onActionClick: (prompt: string) => void;
+  onActionClick?: (prompt: string) => void;
 }
 
 export default function ActionGrid({ onActionClick }: ActionGridProps) {
+  const router = useRouter();
   return (
     <Box>
       <Typography
@@ -114,7 +59,10 @@ export default function ActionGrid({ onActionClick }: ActionGridProps) {
         {ACTIONS.map((action, index) => (
           <Paper
             key={index}
-            onClick={() => onActionClick(action.prompt)}
+            onClick={() => {
+              if (onActionClick) onActionClick(action.label);
+              router.push('/chat?q=' + encodeURIComponent(action.label));
+            }}
             sx={{
               p: 2,
               textAlign: 'center',

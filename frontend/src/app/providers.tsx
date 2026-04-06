@@ -7,6 +7,7 @@ import { SnackbarProvider } from 'notistack';
 import { store } from '@/store';
 import { theme } from '@/lib/theme';
 import AuthHydration from '@/components/auth/AuthHydration';
+import { ToastInitializer } from '@/components/ui/Toast';
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -22,6 +23,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
             }}
             autoHideDuration={3000}
           >
+            <ToastInitializer />
             {children}
           </SnackbarProvider>
         </ThemeProvider>

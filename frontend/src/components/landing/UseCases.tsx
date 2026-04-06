@@ -2,9 +2,11 @@
 
 import { Box, Typography, Button } from '@mui/material';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import { useRouter } from 'next/navigation';
 import { USE_CASES } from '@/lib/constants';
 
 export default function UseCases() {
+  const router = useRouter();
   return (
     <Box sx={{ py: 6 }}>
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
@@ -32,6 +34,7 @@ export default function UseCases() {
         {USE_CASES.map((uc, i) => (
           <Box
             key={i}
+            onClick={() => router.push('/chat?q=' + encodeURIComponent(uc.label))}
             sx={{
               bgcolor: 'background.paper',
               borderRadius: 3,
@@ -53,7 +56,7 @@ export default function UseCases() {
             <Typography variant="h4" sx={{ mb: 1, fontSize: '0.9375rem' }}>
               {uc.label}
             </Typography>
-            <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+            <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mb: 1.5 }}>
               {uc.tags.map((tag) => (
                 <Box
                   key={tag}
@@ -71,6 +74,16 @@ export default function UseCases() {
                 </Box>
               ))}
             </Box>
+            <Typography
+              variant="caption"
+              sx={{
+                color: 'primary.main',
+                fontWeight: 600,
+                fontSize: '0.75rem',
+              }}
+            >
+              {uc.action}
+            </Typography>
           </Box>
         ))}
       </Box>

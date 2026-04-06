@@ -3,10 +3,11 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 interface Message {
   id: string;
   conversationId: string;
-  role: 'user' | 'assistant';
+  role: 'user' | 'assistant' | 'system';
   content: string;
-  timestamp: Date;
+  createdAt: string;
   modelId?: string;
+  attachments?: any[];
 }
 
 interface ChatState {

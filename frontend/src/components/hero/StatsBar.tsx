@@ -26,7 +26,7 @@ export default function StatsBar() {
         </Typography>
       </Box>
 
-      <Box sx={{ height: 20, bgcolor: 'divider' }} />
+      <Box sx={{ width: '1px', height: 30, bgcolor: 'divider' }} />
 
       {/* Labs */}
       <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.75, flexDirection: 'column' }}>
@@ -38,7 +38,7 @@ export default function StatsBar() {
         </Typography>
       </Box>
 
-      <Box sx={{ height: 20, bgcolor: 'divider' }} />
+      <Box sx={{ width: '1px', height: 30, bgcolor: 'divider' }} />
 
       {/* Rating */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexDirection: 'column' }}>
@@ -51,7 +51,7 @@ export default function StatsBar() {
         </Typography>
       </Box>
 
-      <Box sx={{ height: 20, bgcolor: 'divider' }} />
+      <Box sx={{ width: '1px', height: 30, bgcolor: 'divider' }} />
 
       {/* Users */}
       <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.75, flexDirection: 'column' }}>

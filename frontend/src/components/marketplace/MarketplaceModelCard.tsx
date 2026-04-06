@@ -1,5 +1,6 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { Box, Typography, Chip } from '@mui/material';
 import { Star } from '@mui/icons-material';
 import { ModelData } from '@/components/models/ModelCard';
@@ -19,9 +20,9 @@ const TAG_COLORS: Record<string, { bg: string; color: string }> = {
 };
 
 const BADGE_CONFIG = {
-  hot: { label: '🔥 Hot', bg: 'linear-gradient(135deg, #FF6B6B, #FF4757)', color: '#fff' },
-  new: { label: '✨ New', bg: '#E2F5EF', color: '#0A5E49' },
-  open: { label: '🌐 Open', bg: '#EBF0FC', color: '#1E4DA8' },
+  hot: { label: 'Hot', bg: 'linear-gradient(135deg, #FF6B6B, #FF4757)', color: '#fff' },
+  new: { label: 'New', bg: '#EBF0FC', color: '#1E4DA8' },
+  open: { label: 'Open', bg: '#E2F5EF', color: '#0A5E49' },
 };
 
 interface Props {
@@ -30,6 +31,8 @@ interface Props {
 }
 
 export default function MarketplaceModelCard({ model, onClick }: Props) {
+  const router = useRouter();
+
   return (
     <Box
       onClick={() => onClick?.(model)}
@@ -166,6 +169,10 @@ export default function MarketplaceModelCard({ model, onClick }: Props) {
             {model.price}
           </Typography>
           <Box
+            onClick={(e) => {
+              e.stopPropagation();
+              router.push(`/chat?model=${model.id}`);
+            }}
             sx={{
               px: 1,
               py: 0.375,
@@ -178,7 +185,7 @@ export default function MarketplaceModelCard({ model, onClick }: Props) {
               '&:hover': { bgcolor: 'var(--accent2)' },
             }}
           >
-            Use it →
+            Try it →
           </Box>
         </Box>
       </Box>

@@ -3,30 +3,53 @@
 import { useState, useRef, KeyboardEvent } from 'react';
 import {
   Box,
-  TextField,
   IconButton,
-  Chip,
   Tooltip,
   Typography,
+  TextField,
+  Chip,
 } from '@mui/material';
 import {
-  Send,
-  AttachFile,
-  Mic,
-  AutoFixHigh,
   Search,
-  FlashOn,
-  Add,
+  ManageSearch,
+  Psychology,
+  Brush,
+  Computer,
+  Mic,
+  Send,
 } from '@mui/icons-material';
 
-const TOOL_CHIPS = [
-  { icon: AutoFixHigh, label: 'Use cases' },
-  { icon: Search, label: 'Monitor the situation' },
-  { icon: Add, label: 'Create a prototype' },
-  { icon: FlashOn, label: 'Build a business plan' },
-  { icon: AutoFixHigh, label: 'Create content' },
-  { icon: Search, label: 'Analyse & research' },
-  { icon: AutoFixHigh, label: 'Learn something' },
+const TOOL_BUTTONS = [
+  {
+    icon: Search,
+    label: 'Search',
+    color: '#7C3AED',
+    bg: '#F3EEFF',
+  },
+  {
+    icon: ManageSearch,
+    label: 'DeepSearch',
+    color: '#D97706',
+    bg: '#FFFBEB',
+  },
+  {
+    icon: Psychology,
+    label: 'Think',
+    color: '#2563EB',
+    bg: '#EFF6FF',
+  },
+  {
+    icon: Brush,
+    label: 'Create',
+    color: '#0A5E49',
+    bg: '#E2F5EF',
+  },
+  {
+    icon: Computer,
+    label: 'Computer Use',
+    color: '#9B2042',
+    bg: '#FDEDF1',
+  },
 ];
 
 interface ChatInputProps {
@@ -63,45 +86,7 @@ export default function ChatInput({ onSend, isStreaming, selectedModel }: ChatIn
         pb: 2,
       }}
     >
-      {/* Tool suggestion chips */}
-      <Box
-        sx={{
-          display: 'flex',
-          gap: 0.75,
-          mb: 1.5,
-          overflowX: 'auto',
-          pb: 0.5,
-          '&::-webkit-scrollbar': { height: 0 },
-        }}
-      >
-        {TOOL_CHIPS.map(({ icon: Icon, label }) => (
-          <Chip
-            key={label}
-            icon={<Icon sx={{ fontSize: 14 }} />}
-            label={label}
-            size="small"
-            onClick={() => setValue((v) => v + (v ? ' ' : '') + label)}
-            sx={{
-              height: 28,
-              borderRadius: '8px',
-              bgcolor: 'var(--bg)',
-              border: '1px solid var(--border)',
-              color: 'var(--text2)',
-              fontSize: '0.75rem',
-              fontWeight: 500,
-              flexShrink: 0,
-              cursor: 'pointer',
-              '& .MuiChip-icon': { color: 'var(--text3)', ml: 0.5 },
-              '&:hover': {
-                bgcolor: 'var(--bg2)',
-                borderColor: 'var(--border2)',
-              },
-            }}
-          />
-        ))}
-      </Box>
-
-      {/* Input box */}
+      {/* Input container */}
       <Box
         sx={{
           display: 'flex',
@@ -117,12 +102,13 @@ export default function ChatInput({ onSend, isStreaming, selectedModel }: ChatIn
           },
         }}
       >
+        {/* Textarea */}
         <TextField
           multiline
           minRows={2}
           maxRows={6}
           fullWidth
-          placeholder="Describe your project, ask a question, or just say hi — I'm here to help..."
+          placeholder="Describe your project, ask a question, or just say hi..."
           value={value}
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={handleKeyDown}
@@ -147,33 +133,88 @@ export default function ChatInput({ onSend, isStreaming, selectedModel }: ChatIn
           }}
         />
 
-        {/* Bottom bar */}
+        {/* Bottom toolbar */}
         <Box
           sx={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
             px: 1.5,
-            pb: 1,
+            pb: 1.25,
+            pt: 0.5,
           }}
         >
-          <Box sx={{ display: 'flex', gap: 0.5 }}>
-            <Tooltip title="Attach file">
-              <IconButton size="small" sx={{ color: 'var(--text3)', '&:hover': { color: 'var(--text2)' } }}>
-                <AttachFile sx={{ fontSize: 18 }} />
-              </IconButton>
-            </Tooltip>
+          {/* Left: colorful icon buttons */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+            {TOOL_BUTTONS.map(({ icon: Icon, label, color, bg }) => (
+              <Tooltip key={label} title={label}>
+                <IconButton
+                  size="small"
+                  sx={{
+                    width: 30,
+                    height: 30,
+                    borderRadius: '8px',
+                    bgcolor: bg,
+                    color: color,
+                    transition: 'all 0.18s ease',
+                    '&:hover': {
+                      bgcolor: color,
+                      color: '#fff',
+                      transform: 'translateY(-1px)',
+                      boxShadow: `0 3px 8px ${color}33`,
+                    },
+                  }}
+                >
+                  <Icon sx={{ fontSize: 16 }} />
+                </IconButton>
+              </Tooltip>
+            ))}
+          </Box>
+
+          {/* Right: model pill, mic, send */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            {/* Model selector pill */}
+            <Chip
+              label={selectedModel || 'GPT-5.4'}
+              size="small"
+              onClick={() => {}}
+              sx={{
+                height: 28,
+                borderRadius: '14px',
+                bgcolor: 'var(--bg2)',
+                border: '1px solid var(--border)',
+                color: 'var(--text2)',
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                '& .MuiChip-label': { px: 1.25 },
+                '&:hover': {
+                  bgcolor: 'var(--bg3)',
+                  borderColor: 'var(--border2)',
+                },
+              }}
+            />
+
+            {/* Mic button */}
             <Tooltip title="Voice input">
-              <IconButton size="small" sx={{ color: 'var(--text3)', '&:hover': { color: 'var(--text2)' } }}>
+              <IconButton
+                size="small"
+                sx={{
+                  width: 30,
+                  height: 30,
+                  borderRadius: '8px',
+                  color: 'var(--text3)',
+                  '&:hover': {
+                    color: 'var(--text)',
+                    bgcolor: 'var(--bg2)',
+                  },
+                }}
+              >
                 <Mic sx={{ fontSize: 18 }} />
               </IconButton>
             </Tooltip>
-          </Box>
 
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-            <Typography sx={{ fontSize: '0.75rem', color: 'var(--text3)' }}>
-              {selectedModel}
-            </Typography>
+            {/* Send button */}
             <Tooltip title={isStreaming ? 'Generating...' : 'Send (Enter)'}>
               <span>
                 <IconButton
@@ -181,14 +222,15 @@ export default function ChatInput({ onSend, isStreaming, selectedModel }: ChatIn
                   disabled={!value.trim() || isStreaming}
                   size="small"
                   sx={{
-                    width: 32,
-                    height: 32,
+                    width: 34,
+                    height: 34,
                     bgcolor: value.trim() && !isStreaming ? 'var(--accent)' : 'var(--bg3)',
                     color: value.trim() && !isStreaming ? '#fff' : 'var(--text3)',
-                    borderRadius: '8px',
+                    borderRadius: '10px',
                     transition: 'all 0.15s ease',
                     '&:hover': {
                       bgcolor: value.trim() && !isStreaming ? 'var(--accent2)' : 'var(--bg3)',
+                      transform: value.trim() && !isStreaming ? 'scale(1.05)' : 'none',
                     },
                     '&.Mui-disabled': {
                       bgcolor: 'var(--bg3)',
@@ -214,41 +256,6 @@ export default function ChatInput({ onSend, isStreaming, selectedModel }: ChatIn
               </span>
             </Tooltip>
           </Box>
-        </Box>
-      </Box>
-
-      {/* Suggestions below input */}
-      <Box sx={{ mt: 1.5 }}>
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
-          {[
-            '💡 Help me find the best AI model for my project',
-            '🌐 I want to build an AI chatbot for my website',
-            '📄 Analyse documents and extract key information',
-            '🎙️ Add voice and speech recognition to my app',
-          ].map((suggestion) => (
-            <Box
-              key={suggestion}
-              onClick={() => setValue(suggestion.replace(/^[^\s]+\s/, ''))}
-              sx={{
-                fontSize: '0.75rem',
-                color: 'var(--text2)',
-                bgcolor: 'var(--bg)',
-                border: '1px solid var(--border)',
-                borderRadius: '6px',
-                px: 1.25,
-                py: 0.5,
-                cursor: 'pointer',
-                transition: 'all 0.15s ease',
-                '&:hover': {
-                  bgcolor: 'var(--bg2)',
-                  borderColor: 'var(--accent)',
-                  color: 'var(--accent)',
-                },
-              }}
-            >
-              {suggestion}
-            </Box>
-          ))}
         </Box>
       </Box>
     </Box>

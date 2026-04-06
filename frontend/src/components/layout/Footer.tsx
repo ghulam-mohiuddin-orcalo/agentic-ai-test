@@ -1,8 +1,15 @@
 'use client';
 
 import { Box, Container, Typography } from '@mui/material';
+import Link from 'next/link';
 
-const FOOTER_LINKS = ['Models', 'Research', 'API', 'Privacy', 'Terms'];
+const FOOTER_LINKS = [
+  { label: 'Models', href: '/marketplace' },
+  { label: 'Research', href: '/discover' },
+  { label: 'API', href: '/chat' },
+  { label: 'Privacy', href: '#' },
+  { label: 'Terms', href: '#' },
+];
 
 export default function Footer() {
   return (
@@ -40,17 +47,20 @@ export default function Footer() {
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
             {FOOTER_LINKS.map((link) => (
               <Typography
-                key={link}
+                key={link.label}
+                component={Link}
+                href={link.href}
                 variant="body2"
                 sx={{
                   color: 'rgba(255,255,255,0.4)',
                   cursor: 'pointer',
                   fontSize: '0.875rem',
+                  textDecoration: 'none',
                   transition: 'color 0.15s ease',
                   '&:hover': { color: '#fff' },
                 }}
               >
-                {link}
+                {link.label}
               </Typography>
             ))}
           </Box>

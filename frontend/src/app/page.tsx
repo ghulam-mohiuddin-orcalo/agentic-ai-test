@@ -1,5 +1,7 @@
 import { Box, Container, Typography } from '@mui/material';
 import HeroSearchCard from '@/components/hero/HeroSearchCard';
+import SuggestedQuestionsPanel from '@/components/hero/SuggestedQuestionsPanel';
+import AgentPanel from '@/components/hero/AgentPanel';
 import StatsBar from '@/components/hero/StatsBar';
 import FeaturedModels from '@/components/landing/FeaturedModels';
 import BuiltForBuilders from '@/components/landing/BuiltForBuilders';
@@ -52,6 +54,12 @@ export default function HomePage() {
           {/* Hero Search Card */}
           <Box sx={{ maxWidth: 820, mx: 'auto', mb: 4 }}>
             <HeroSearchCard />
+          </Box>
+
+          {/* Suggested Questions & Agent Panel */}
+          <Box sx={{ maxWidth: 720, mx: 'auto', mb: 4 }}>
+            <SuggestedQuestionsPanel />
+            <AgentPanel />
           </Box>
 
           {/* Stats Bar */}

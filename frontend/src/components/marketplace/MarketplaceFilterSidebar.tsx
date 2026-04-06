@@ -56,6 +56,13 @@ const LICENSE_OPTIONS = [
   { value: 'research', label: 'Research only' },
 ];
 
+const QUICK_GUIDES = [
+  { label: 'How to choose the right AI model', href: '/discover' },
+  { label: 'Understanding pricing tiers', href: '/discover' },
+  { label: 'Open source vs proprietary', href: '/discover' },
+  { label: 'Benchmark scores explained', href: '/discover' },
+];
+
 interface Props {
   filters: FilterState;
   onChange: (next: FilterState) => void;
@@ -238,7 +245,7 @@ export default function MarketplaceFilterSidebar({ filters, onChange }: Props) {
       <Divider sx={{ borderColor: 'var(--border)' }} />
 
       {/* License */}
-      <Box sx={{ p: 2, pb: 2 }}>
+      <Box sx={{ p: 2, pb: 1.5 }}>
         <SectionHeader label="LICENSE" />
         <RadioGroup
           value={filters.license}
@@ -248,6 +255,39 @@ export default function MarketplaceFilterSidebar({ filters, onChange }: Props) {
             <FormControlLabel key={value} value={value} control={<Radio size="small" />} label={label} sx={radioSx} />
           ))}
         </RadioGroup>
+      </Box>
+
+      <Divider sx={{ borderColor: 'var(--border)' }} />
+
+      {/* Quick Guides */}
+      <Box sx={{ p: 2, pb: 2 }}>
+        <SectionHeader label="QUICK GUIDES" />
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.25 }}>
+          {QUICK_GUIDES.map(({ label, href }) => (
+            <Box
+              key={label}
+              component="a"
+              href={href}
+              sx={{
+                fontSize: '0.8125rem',
+                color: 'var(--accent)',
+                textDecoration: 'none',
+                py: 0.625,
+                px: 0.5,
+                borderRadius: '6px',
+                cursor: 'pointer',
+                lineHeight: 1.4,
+                display: 'block',
+                '&:hover': {
+                  bgcolor: 'var(--accent-lt)',
+                  textDecoration: 'underline',
+                },
+              }}
+            >
+              {label}
+            </Box>
+          ))}
+        </Box>
       </Box>
     </Box>
   );

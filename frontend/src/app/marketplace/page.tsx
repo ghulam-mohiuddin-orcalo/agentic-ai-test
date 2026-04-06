@@ -26,6 +26,30 @@ import { MARKETPLACE_MODELS } from '@/lib/marketplaceData';
 import { AI_LABS } from '@/lib/constants';
 import type { ModelData } from '@/components/models/ModelCard';
 
+const LAB_DESCRIPTIONS: Record<string, string> = {
+  openai: 'Pioneering AI research lab behind GPT-5, o3, and DALL-E. Known for state-of-the-art language models.',
+  anthropic: 'AI safety company building reliable, interpretable systems. Creators of the Claude model family.',
+  google: 'Google DeepMind builds frontier AI models including Gemini, with deep multimodal and reasoning capabilities.',
+  meta: 'Meta AI develops open-source models like Llama, advancing accessible AI for the research community.',
+  deepseek: 'Chinese AI lab focused on cost-efficient frontier models with strong math and coding performance.',
+  mistral: 'European AI lab building efficient, multilingual models with strong reasoning and function calling.',
+  xai: 'Elon Musk-founded lab building Grok models with real-time data access and deep reasoning.',
+  cohere: 'Enterprise-focused AI building RAG-specialized models with built-in grounding and citations.',
+  qwen: 'Alibaba Cloud AI developing multilingual open-source models with strong code and math capabilities.',
+  nvidia: 'GPU leader now building AI models. Nemotron series excels at inference efficiency.',
+  microsoft: 'Building compact, efficient models like Phi that punch above their weight class.',
+  amazon: 'Amazon Bedrock provides managed access to frontier models plus proprietary Nova and Titan series.',
+  stability: 'Open-source generative AI lab known for Stable Diffusion and image generation models.',
+  perplexity: 'AI-powered search company building models optimized for real-time information retrieval.',
+  together: 'Open-source AI infrastructure company hosting and fine-tuning community models at scale.',
+  moonshot: 'Chinese AI startup behind Kimi models, known for long-context and agent swarm orchestration.',
+  zhipu: 'Chinese AI lab developing the GLM model family with strong multilingual capabilities.',
+  baidu: 'Chinese tech giant building ERNIE models for enterprise and multilingual applications.',
+  ai21: 'Israeli AI lab creating Jamba models with hybrid Mamba-Transformer architecture.',
+  inflection: 'Building emotionally intelligent AI assistants with natural conversation abilities.',
+  allenai: 'Non-profit AI research institute creating open-source models like OLMo for scientific progress.',
+};
+
 const SORT_OPTIONS = [
   { value: 'rating', label: 'Top Rated' },
   { value: 'newest', label: 'Newest' },
@@ -214,7 +238,7 @@ export default function MarketplacePage() {
               '&:hover': { bgcolor: selectedLab === '' ? 'var(--accent2)' : 'var(--bg2)' },
             }}
           />
-          {AI_LABS.slice(0, 14).map((lab) => (
+          {AI_LABS.map((lab) => (
             <Chip
               key={lab.id}
               label={lab.name}
@@ -237,6 +261,72 @@ export default function MarketplacePage() {
           ))}
         </Box>
       </Box>
+
+      {/* Selected lab banner */}
+      {selectedLab && (() => {
+        const lab = AI_LABS.find((l) => l.id === selectedLab);
+        const labModelCount = MARKETPLACE_MODELS.filter((m) => m.lab === selectedLab).length;
+        if (!lab) return null;
+        return (
+          <Box
+            sx={{
+              px: { xs: 2, md: 4 },
+              py: 1.5,
+              bgcolor: 'var(--card)',
+              borderBottom: '1px solid var(--border)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1.5,
+            }}
+          >
+            <Box
+              sx={{
+                width: 36,
+                height: 36,
+                borderRadius: '10px',
+                bgcolor: `${lab.color}18`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '1.125rem',
+                flexShrink: 0,
+              }}
+            >
+              {lab.icon}
+            </Box>
+            <Box sx={{ minWidth: 0 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Typography
+                  sx={{
+                    fontFamily: "'Syne', sans-serif",
+                    fontWeight: 700,
+                    fontSize: '0.9375rem',
+                    color: 'var(--text)',
+                  }}
+                >
+                  {lab.name}
+                </Typography>
+                <Typography
+                  sx={{
+                    fontSize: '0.75rem',
+                    color: 'var(--text3)',
+                    bgcolor: 'var(--bg)',
+                    px: 1,
+                    py: 0.125,
+                    borderRadius: '2rem',
+                    border: '1px solid var(--border)',
+                  }}
+                >
+                  {labModelCount} {labModelCount === 1 ? 'model' : 'models'}
+                </Typography>
+              </Box>
+              <Typography sx={{ fontSize: '0.8125rem', color: 'var(--text2)', lineHeight: 1.4 }}>
+                {LAB_DESCRIPTIONS[selectedLab] ?? `Explore models from ${lab.name}.`}
+              </Typography>
+            </Box>
+          </Box>
+        );
+      })()}
 
       {/* Body: sidebar + content */}
       <Box sx={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0 }}>
