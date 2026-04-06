@@ -19,12 +19,12 @@ import {
   Replay,
 } from '@mui/icons-material';
 import { useAppDispatch } from '@/store/hooks';
-import { setAttachedFile, setInitialPrompt, type AttachedFile as AttachedFileType } from '@/store/slices/chatSlice';
+import { setAttachedFiles, setInitialPrompt, type AttachedFile as AttachedFileType } from '@/store/slices/chatSlice';
 import { useSpeechRecognition, type SpeechCaptureResult } from '@/hooks/useSpeechRecognition';
 import { useScreenRecorder } from '@/hooks/useScreenRecorder';
 import { useVideoRecorder } from '@/hooks/useVideoRecorder';
-import { setPendingVoiceMessage } from '@/lib/pendingVoiceMessage';
 import { useTranslation } from 'react-i18next';
+import { createAttachmentFromFile } from '@/lib/chatAttachments';
 
 const ACCEPTED_FILE_TYPES = {
   attach: '.pdf,.txt,.csv,.json,.md,.doc,.docx',
@@ -61,9 +61,10 @@ export default function HeroSearchCard() {
 
     setFile(result.audioFile);
     setToast({ message: 'Voice message ready. Opening chat...', severity: 'success' });
-    setPendingVoiceMessage(result.audioFile);
+    dispatch(setInitialPrompt(''));
+    dispatch(setAttachedFiles([result.audioFile]));
     router.push('/chat');
-  }, [router]);
+  }, [dispatch, router]);
 
   const {
     isListening: isVoiceRecording,
@@ -221,9 +222,7 @@ export default function HeroSearchCard() {
     }
 
     dispatch(setInitialPrompt(prompt));
-    if (file) {
-      dispatch(setAttachedFile(file));
-    }
+    dispatch(setAttachedFiles(file ? [file] : []));
 
     router.push('/chat');
   };
@@ -326,21 +325,18 @@ export default function HeroSearchCard() {
     closeScreenRecorder();
   };
 
-  const processFile = (selectedFile: File) => {
+  const processFile = async (selectedFile: File) => {
     if (selectedFile.size > MAX_FILE_SIZE) {
       setToast({ message: t('home.search.fileTooLarge'), severity: 'error' });
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      const attachedFile: AttachedFileType = {
+    try {
+      const attachedFile = await createAttachmentFromFile(selectedFile, {
         name: selectedFile.name,
         type: selectedFile.type,
-        size: selectedFile.size,
-        dataUrl: reader.result as string,
         source: 'upload',
-      };
+      });
       setFile(attachedFile);
 
       // Auto-fill search with context-aware prompt if textarea is empty
@@ -359,16 +355,16 @@ export default function HeroSearchCard() {
       }
 
       setToast({ message: t('home.search.attached', { filename: selectedFile.name }), severity: 'success' });
-    };
-    reader.onerror = () => {
+    } catch {
       setToast({ message: t('home.search.fileReadError'), severity: 'error' });
-    };
-    reader.readAsDataURL(selectedFile);
+    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
-    if (selectedFile) processFile(selectedFile);
+    if (selectedFile) {
+      void processFile(selectedFile);
+    }
     e.target.value = '';
   };
 

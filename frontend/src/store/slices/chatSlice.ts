@@ -11,11 +11,14 @@ interface Message {
 }
 
 export interface AttachedFile {
+  id: string;
   name: string;
   type: string;
   size: number;
   dataUrl: string;
-  source?: 'upload' | 'voice';
+  kind: 'file' | 'image' | 'audio' | 'video' | 'screen';
+  source: 'upload' | 'voice' | 'video' | 'screen';
+  durationSeconds?: number;
 }
 
 interface ChatState {
@@ -26,7 +29,7 @@ interface ChatState {
   streamingContent: string;
   error: string | null;
   initialPrompt: string | null;
-  attachedFile: AttachedFile | null;
+  attachedFiles: AttachedFile[];
 }
 
 const initialState: ChatState = {
@@ -37,7 +40,7 @@ const initialState: ChatState = {
   streamingContent: '',
   error: null,
   initialPrompt: null,
-  attachedFile: null,
+  attachedFiles: [],
 };
 
 const chatSlice = createSlice({
@@ -76,12 +79,12 @@ const chatSlice = createSlice({
     setInitialPrompt: (state, action: PayloadAction<string>) => {
       state.initialPrompt = action.payload;
     },
-    setAttachedFile: (state, action: PayloadAction<AttachedFile | null>) => {
-      state.attachedFile = action.payload;
+    setAttachedFiles: (state, action: PayloadAction<AttachedFile[]>) => {
+      state.attachedFiles = action.payload;
     },
     clearInitialPrompt: (state) => {
       state.initialPrompt = null;
-      state.attachedFile = null;
+      state.attachedFiles = [];
     },
     setSelectedModel: (state, action: PayloadAction<string>) => {
       state.selectedModel = action.payload;
@@ -113,7 +116,7 @@ export const {
   setError,
   clearError,
   setInitialPrompt,
-  setAttachedFile,
+  setAttachedFiles,
   clearInitialPrompt,
   setSelectedModel,
   resetChat,

@@ -5,7 +5,7 @@ export interface GuestMessage {
   role: 'user' | 'assistant' | 'system';
   content: string;
   timestamp: string;
-  attachment?: AttachedFile;
+  attachments?: AttachedFile[];
 }
 
 export interface GuestConversation {
@@ -70,7 +70,7 @@ export class GuestChatStorage {
     conversationId: string,
     role: 'user' | 'assistant',
     content: string,
-    attachment?: AttachedFile
+    attachments?: AttachedFile[]
   ): GuestMessage {
     const conversations = this.getConversations();
     const conversation = conversations.find(conv => conv.id === conversationId);
@@ -84,7 +84,7 @@ export class GuestChatStorage {
       role,
       content,
       timestamp: new Date().toISOString(),
-      attachment,
+      attachments,
     };
 
     conversation.messages.push(message);

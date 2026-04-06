@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback, useEffect, KeyboardEvent } from 'react';
+import { useState, useRef, useCallback, useEffect, KeyboardEvent, useMemo } from 'react';
 import {
   Box,
   IconButton,
@@ -15,346 +15,470 @@ import {
   Button,
 } from '@mui/material';
 import {
-  Mic,
-  MicOff,
-  Pause,
-  Send,
-  EmojiEmotions,
   AttachFile,
-  AddReaction,
-  Lightbulb,
-  Visibility,
-  AutoFixHigh,
-  BusinessCenter,
-  Create,
-  Science,
-  School,
   Close,
-  Videocam,
-  StopCircle,
-  Cameraswitch,
+  Image as ImageIcon,
+  KeyboardVoice,
+  Mic,
+  Pause,
   Replay,
   ScreenShare,
+  Send,
+  StopCircle,
+  Videocam,
+  Cameraswitch,
+  Description,
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
-import { useSpeechRecognition, type SpeechCaptureResult } from '@/hooks/useSpeechRecognition';
 import { useVideoRecorder } from '@/hooks/useVideoRecorder';
 import { useScreenRecorder } from '@/hooks/useScreenRecorder';
+import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
+import { useSpeechDictation } from '@/hooks/useSpeechDictation';
 import { useGetModelsQuery, findModelInfo } from '@/store/api/modelsApi';
 import type { AttachedFile } from '@/store/slices/chatSlice';
+import {
+  createAttachmentFromFile,
+  formatDuration,
+  formatFileSize,
+  validateSelectedFile,
+} from '@/lib/chatAttachments';
+import { clearComposerDraft, readComposerDraft, writeComposerDraft } from '@/lib/composerDraft';
 
 const ACTION_CHIP_KEYS = [
-  { icon: Lightbulb, labelKey: 'chat.input.useCases', color: '#059669', bg: '#ECFDF5', border: '#BBF7D0' },
-  { icon: Visibility, labelKey: 'chat.input.monitorSituation', color: '#7C3AED', bg: '#F3EEFF', border: '#DDD6FE' },
-  { icon: AutoFixHigh, labelKey: 'chat.input.createPrototype', color: '#D97706', bg: '#FFFBEB', border: '#FDE68A' },
-  { icon: BusinessCenter, labelKey: 'chat.input.buildBusinessPlan', color: '#2563EB', bg: '#EFF6FF', border: '#BFDBFE' },
-  { icon: Create, labelKey: 'chat.input.createContent', color: '#0A5E49', bg: '#E2F5EF', border: '#A7F3D0' },
-  { icon: Science, labelKey: 'chat.input.analyzeResearch', color: '#9B2042', bg: '#FDEDF1', border: '#FECDD3' },
-  { icon: School, labelKey: 'chat.input.learnSomething', color: '#0891B2', bg: '#E0F7FA', border: '#A5F3FC' },
+  { labelKey: 'chat.input.useCases', color: '#059669', bg: '#ECFDF5', border: '#BBF7D0' },
+  { labelKey: 'chat.input.monitorSituation', color: '#7C3AED', bg: '#F3EEFF', border: '#DDD6FE' },
+  { labelKey: 'chat.input.createPrototype', color: '#D97706', bg: '#FFFBEB', border: '#FDE68A' },
+  { labelKey: 'chat.input.buildBusinessPlan', color: '#2563EB', bg: '#EFF6FF', border: '#BFDBFE' },
 ];
 
+type ToastState = {
+  message: string;
+  severity: 'success' | 'error' | 'info';
+} | null;
+
 interface ChatInputProps {
-  onSend: (message: string, file?: AttachedFile | null) => void;
+  onSend: (message: string, attachments?: AttachedFile[]) => void | Promise<void>;
   onPause: () => void;
   isStreaming: boolean;
   selectedModel: string;
 }
 
-export default function ChatInput({ onSend, onPause, isStreaming, selectedModel }: ChatInputProps) {
-  const [value, setValue] = useState('');
-  const [attachedFile, setAttachedFile] = useState<AttachedFile | null>(null);
-  const [toast, setToast] = useState<string | null>(null);
-  const [isProcessingVideo, setIsProcessingVideo] = useState(false);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const videoPreviewRef = useRef<HTMLVideoElement>(null);
-  const recordedVideoRef = useRef<HTMLVideoElement>(null);
-  const screenPreviewRef = useRef<HTMLVideoElement>(null);
-  const recordedScreenRef = useRef<HTMLVideoElement>(null);
-  const { t } = useTranslation();
-  const { data: models } = useGetModelsQuery();
-  const modelInfo = findModelInfo(models, selectedModel);
+function AttachmentPreview({
+  attachment,
+  onRemove,
+}: {
+  attachment: AttachedFile;
+  onRemove: (id: string) => void;
+}) {
+  return (
+    <Box
+      sx={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 1,
+        px: 1,
+        py: 0.9,
+        borderRadius: '14px',
+        bgcolor: 'rgba(28,26,22,0.04)',
+        border: '1px solid rgba(28,26,22,0.08)',
+      }}
+    >
+      {attachment.kind === 'image' ? (
+        <Box
+          component="img"
+          src={attachment.dataUrl}
+          alt={attachment.name}
+          sx={{ width: 40, height: 40, borderRadius: '10px', objectFit: 'cover' }}
+        />
+      ) : (
+        <Box
+          sx={{
+            width: 40,
+            height: 40,
+            borderRadius: '10px',
+            bgcolor:
+              attachment.kind === 'video' || attachment.kind === 'screen'
+                ? '#FEF2F2'
+                : attachment.kind === 'audio'
+                  ? '#F3EEFF'
+                  : '#FFF7ED',
+            color:
+              attachment.kind === 'video' || attachment.kind === 'screen'
+                ? '#DC2626'
+                : attachment.kind === 'audio'
+                  ? '#7C3AED'
+                  : '#D97706',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          {attachment.kind === 'video' || attachment.kind === 'screen' ? (
+            <Videocam sx={{ fontSize: 18 }} />
+          ) : attachment.kind === 'audio' ? (
+            <Mic sx={{ fontSize: 18 }} />
+          ) : (
+            <Description sx={{ fontSize: 18 }} />
+          )}
+        </Box>
+      )}
+      <Box sx={{ minWidth: 0, flex: 1 }}>
+        <Typography
+          sx={{
+            fontSize: '0.78rem',
+            fontWeight: 700,
+            color: 'var(--text)',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {attachment.name}
+        </Typography>
+        <Typography sx={{ fontSize: '0.68rem', color: 'var(--text3)' }}>
+          {attachment.durationSeconds ? formatDuration(attachment.durationSeconds) : formatFileSize(attachment.size)}
+        </Typography>
+      </Box>
+      <IconButton size="small" onClick={() => onRemove(attachment.id)} sx={{ color: 'var(--text3)' }}>
+        <Close sx={{ fontSize: 16 }} />
+      </IconButton>
+    </Box>
+  );
+}
 
-  const onSpeechResult = useCallback(({ audioFile }: SpeechCaptureResult) => {
-    if (audioFile) {
-      onSend('', audioFile);
-      setToast('Voice message sent');
-    }
-  }, [onSend]);
-
-  const { isListening, isSupported, error: speechError, startListening, stopListening } =
-    useSpeechRecognition(onSpeechResult);
-  const {
-    isSupported: isVideoSupported,
-    isRecording: isVideoRecording,
-    isCameraOpen,
-    previewStream,
-    recordedVideo,
-    elapsedSeconds,
-    error: videoError,
-    openCamera,
-    startRecording,
-    stopRecording,
-    closeRecorder,
-    retakeRecording,
-    switchCamera,
-  } = useVideoRecorder();
-  const {
-    isSupported: isScreenSupported,
-    isRecording: isScreenRecording,
-    isPickerOpen: isScreenPickerOpen,
-    previewStream: screenPreviewStream,
-    recordedVideo: recordedScreen,
-    elapsedSeconds: screenElapsedSeconds,
-    error: screenError,
-    startRecording: startScreenRecording,
-    stopRecording: stopScreenRecording,
-    retakeRecording: retakeScreenRecording,
-    closeRecorder: closeScreenRecorder,
-  } = useScreenRecorder();
-
-  const combinedError = speechError || videoError || screenError;
+function CaptureDialog({
+  open,
+  title,
+  subtitle,
+  previewStream,
+  recordedFile,
+  onClose,
+  onRetake,
+  onPrimary,
+  primaryLabel,
+  primaryColor,
+  previewMode = 'cover',
+  onSwitchCamera,
+  switchDisabled,
+}: {
+  open: boolean;
+  title: string;
+  subtitle: string;
+  previewStream: MediaStream | null;
+  recordedFile: AttachedFile | null;
+  onClose: () => void;
+  onRetake?: () => void;
+  onPrimary: () => void;
+  primaryLabel: string;
+  primaryColor: 'error' | 'success';
+  previewMode?: 'cover' | 'contain';
+  onSwitchCamera?: () => void;
+  switchDisabled?: boolean;
+}) {
+  const livePreviewRef = useRef<HTMLVideoElement | null>(null);
 
   useEffect(() => {
-    if (!isCameraOpen || !videoPreviewRef.current) {
-      return;
-    }
-
-    videoPreviewRef.current.srcObject = previewStream;
-    if (previewStream) {
-      videoPreviewRef.current.onloadedmetadata = () => {
-        void videoPreviewRef.current?.play().catch(() => {});
-      };
-      void videoPreviewRef.current.play().catch(() => {});
-    }
-  }, [isCameraOpen, previewStream]);
-
-  const setVideoPreviewNode = useCallback((node: HTMLVideoElement | null) => {
-    videoPreviewRef.current = node;
-
+    const node = livePreviewRef.current;
     if (!node) {
       return;
     }
 
-    node.muted = true;
-    node.autoplay = true;
-    node.playsInline = true;
     node.srcObject = previewStream;
-
     if (previewStream) {
       node.onloadedmetadata = () => {
-        void node.play().catch(() => {});
+        void node.play().catch(() => undefined);
       };
-      void node.play().catch(() => {});
     }
   }, [previewStream]);
 
-  useEffect(() => {
-    if (recordedVideoRef.current && recordedVideo?.dataUrl) {
-      recordedVideoRef.current.load();
-      void recordedVideoRef.current.play().catch(() => {});
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+      <DialogContent sx={{ p: 2, bgcolor: '#111418', color: '#fff' }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
+          <Box>
+            <Typography sx={{ fontSize: '0.98rem', fontWeight: 700 }}>{title}</Typography>
+            <Typography sx={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.68)', mt: 0.5 }}>
+              {subtitle}
+            </Typography>
+          </Box>
+          {onSwitchCamera && (
+            <Button
+              startIcon={<Cameraswitch />}
+              onClick={onSwitchCamera}
+              disabled={switchDisabled}
+              sx={{ color: 'rgba(255,255,255,0.84)' }}
+            >
+              Switch
+            </Button>
+          )}
+        </Box>
+
+        {recordedFile ? (
+          <Box
+            component="video"
+            controls
+            preload="metadata"
+            src={recordedFile.dataUrl}
+            sx={{
+              width: '100%',
+              minHeight: 280,
+              borderRadius: '18px',
+              bgcolor: '#000',
+            }}
+          />
+        ) : (
+          <Box
+            component="video"
+            ref={livePreviewRef}
+            autoPlay
+            muted
+            playsInline
+            sx={{
+              width: '100%',
+              minHeight: 280,
+              borderRadius: '18px',
+              bgcolor: '#000',
+              objectFit: previewMode,
+            }}
+          />
+        )}
+      </DialogContent>
+
+      <DialogActions sx={{ px: 2, pb: 2, bgcolor: '#111418' }}>
+        <Button onClick={onClose} sx={{ color: 'rgba(255,255,255,0.75)' }}>
+          Cancel
+        </Button>
+        {recordedFile && onRetake && (
+          <Button onClick={onRetake} startIcon={<Replay />} sx={{ color: 'rgba(255,255,255,0.88)' }}>
+            Retake
+          </Button>
+        )}
+        <Button onClick={onPrimary} variant="contained" color={primaryColor}>
+          {primaryLabel}
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
+export default function ChatInput({ onSend, onPause, isStreaming, selectedModel }: ChatInputProps) {
+  const { t } = useTranslation();
+  const { data: models } = useGetModelsQuery();
+  const modelInfo = findModelInfo(models, selectedModel);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const documentInputRef = useRef<HTMLInputElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const initialDraft = useMemo(() => readComposerDraft(), []);
+
+  const [value, setValue] = useState(initialDraft.text);
+  const [interimText, setInterimText] = useState('');
+  const [attachments, setAttachments] = useState<AttachedFile[]>(initialDraft.attachments);
+  const [toast, setToast] = useState<ToastState>(null);
+  const [isSendingMedia, setIsSendingMedia] = useState(false);
+
+  const voiceRecorder = useVoiceRecorder();
+  const dictation = useSpeechDictation(({ finalText, interimText: nextInterim }) => {
+    setInterimText(nextInterim);
+    if (finalText) {
+      setValue((previous) => {
+        const spacer = previous.trim().length > 0 ? ' ' : '';
+        return `${previous}${spacer}${finalText}`.trimStart();
+      });
+      setInterimText('');
     }
-  }, [recordedVideo]);
+  });
+  const videoRecorder = useVideoRecorder();
+  const screenRecorder = useScreenRecorder();
 
   useEffect(() => {
-    if (!isScreenPickerOpen || !screenPreviewRef.current) {
+    writeComposerDraft({ text: value, attachments });
+  }, [attachments, value]);
+
+  const displayValue = useMemo(() => {
+    if (!interimText) {
+      return value;
+    }
+
+    const spacer = value.trim().length > 0 ? ' ' : '';
+    return `${value}${spacer}${interimText}`;
+  }, [interimText, value]);
+
+  const canSend = value.trim().length > 0 || attachments.length > 0;
+  const derivedError =
+    voiceRecorder.error || dictation.error || videoRecorder.error || screenRecorder.error;
+  const visibleToast = toast ?? (derivedError ? { message: derivedError, severity: 'error' as const } : null);
+
+  const handleSend = useCallback(async () => {
+    if (!canSend || isStreaming) {
       return;
     }
 
-    screenPreviewRef.current.srcObject = screenPreviewStream;
-    if (screenPreviewStream) {
-      screenPreviewRef.current.onloadedmetadata = () => {
-        void screenPreviewRef.current?.play().catch(() => {});
-      };
-      void screenPreviewRef.current.play().catch(() => {});
-    }
-  }, [isScreenPickerOpen, screenPreviewStream]);
-
-  const setScreenPreviewNode = useCallback((node: HTMLVideoElement | null) => {
-    screenPreviewRef.current = node;
-
-    if (!node) {
-      return;
-    }
-
-    node.muted = true;
-    node.autoplay = true;
-    node.playsInline = true;
-    node.srcObject = screenPreviewStream;
-
-    if (screenPreviewStream) {
-      node.onloadedmetadata = () => {
-        void node.play().catch(() => {});
-      };
-      void node.play().catch(() => {});
-    }
-  }, [screenPreviewStream]);
-
-  useEffect(() => {
-    if (recordedScreenRef.current && recordedScreen?.dataUrl) {
-      recordedScreenRef.current.load();
-      void recordedScreenRef.current.play().catch(() => {});
-    }
-  }, [recordedScreen]);
-
-  const formatDuration = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  const handleSend = () => {
-    const trimmed = value.trim();
-    if ((!trimmed && !attachedFile) || isStreaming) return;
-
-    const message = trimmed || t('chat.input.voiceMessageFallback', { defaultValue: 'Voice message' });
-    onSend(message, attachedFile);
+    setInterimText('');
+    await Promise.resolve(onSend(value, attachments));
     setValue('');
-    setAttachedFile(null);
-  };
+    setAttachments([]);
+    clearComposerDraft();
+  }, [attachments, canSend, isStreaming, onSend, value]);
 
-  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
+  const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+      void handleSend();
     }
   };
 
-  const handleMicClick = () => {
-    if (!isSupported) {
-      setToast(t('chat.input.voiceNotSupported'));
+  const handleAddFiles = useCallback(
+    async (files: FileList | null, category: 'document' | 'image') => {
+      const fileList = Array.from(files ?? []);
+      if (!fileList.length) {
+        return;
+      }
+
+      try {
+        const nextAttachments = await Promise.all(
+          fileList.map(async (file) => {
+            const error = validateSelectedFile(file, category);
+            if (error) {
+              throw new Error(error);
+            }
+
+            return createAttachmentFromFile(file, {
+              name: file.name,
+              type: file.type,
+              source: 'upload',
+            });
+          })
+        );
+
+        setAttachments((previous) => [...previous, ...nextAttachments]);
+        setToast({
+          message:
+            nextAttachments.length === 1
+              ? `${nextAttachments[0].name} attached`
+              : `${nextAttachments.length} files attached`,
+          severity: 'success',
+        });
+      } catch (error) {
+        setToast({
+          message: error instanceof Error ? error.message : 'Could not attach those files.',
+          severity: 'error',
+        });
+      }
+    },
+    []
+  );
+
+  const removeAttachment = (id: string) => {
+    setAttachments((previous) => previous.filter((attachment) => attachment.id !== id));
+  };
+
+  const handleVoiceNoteToggle = useCallback(async () => {
+    if (isStreaming && !voiceRecorder.isRecording) {
+      setToast({ message: 'Pause the current response before sending a new voice note.', severity: 'info' });
       return;
     }
-    if (isListening) {
-      stopListening();
-    } else {
-      startListening();
+
+    if (!voiceRecorder.isSupported) {
+      setToast({ message: 'Voice recording is not supported in this browser.', severity: 'error' });
+      return;
     }
-  };
+
+    if (dictation.isListening) {
+      dictation.stopListening();
+    }
+
+    if (!voiceRecorder.isRecording) {
+      await voiceRecorder.startRecording();
+      return;
+    }
+
+    setIsSendingMedia(true);
+    const attachment = await voiceRecorder.stopRecording();
+    setIsSendingMedia(false);
+
+    if (!attachment) {
+      setToast({ message: 'Could not send the voice note.', severity: 'error' });
+      return;
+    }
+
+    await Promise.resolve(onSend('', [attachment]));
+    setToast({ message: 'Voice note sent', severity: 'success' });
+  }, [dictation, isStreaming, onSend, voiceRecorder]);
+
+  const cancelVoiceNote = useCallback(() => {
+    voiceRecorder.cancelRecording();
+    setToast({ message: 'Voice note discarded', severity: 'info' });
+  }, [voiceRecorder]);
+
+  const handleVoiceTypingToggle = useCallback(() => {
+    if (!dictation.isSupported) {
+      setToast({ message: 'Voice typing is not supported in this browser.', severity: 'error' });
+      return;
+    }
+
+    if (voiceRecorder.isRecording) {
+      return;
+    }
+
+    if (dictation.isListening) {
+      dictation.stopListening();
+      setInterimText('');
+      return;
+    }
+
+    dictation.startListening();
+    textareaRef.current?.focus();
+  }, [dictation, voiceRecorder.isRecording]);
+
+  const sendRecordedAttachment = useCallback(
+    async (attachment: AttachedFile | null, successMessage: string, close: () => void) => {
+      if (isStreaming) {
+        setToast({ message: 'Pause the current response before sending a new recording.', severity: 'info' });
+        return;
+      }
+
+      if (!attachment) {
+        setToast({ message: 'Could not prepare the recording to send.', severity: 'error' });
+        return;
+      }
+
+      setIsSendingMedia(true);
+      await Promise.resolve(onSend('', [attachment]));
+      setIsSendingMedia(false);
+      close();
+      setToast({ message: successMessage, severity: 'success' });
+    },
+    [isStreaming, onSend]
+  );
+
+  const handleVideoButton = useCallback(async () => {
+    if (!videoRecorder.isSupported) {
+      setToast({ message: 'Webcam recording is not supported in this browser.', severity: 'error' });
+      return;
+    }
+
+    if (!videoRecorder.isCameraOpen) {
+      const opened = await videoRecorder.openCamera();
+      if (!opened) {
+        return;
+      }
+    }
+  }, [videoRecorder]);
+
+  const handleScreenButton = useCallback(async () => {
+    if (!screenRecorder.isSupported) {
+      setToast({ message: 'Screen recording is not supported in this browser.', severity: 'error' });
+      return;
+    }
+
+    if (!screenRecorder.isPickerOpen) {
+      await screenRecorder.startRecording();
+    }
+  }, [screenRecorder]);
 
   const handleChipClick = (label: string) => {
     const prompt = `I'd like to: ${label}`;
-    onSend(prompt);
-  };
-
-  const handleFileClick = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleVideoClick = async () => {
-    if (!isVideoSupported) {
-      setToast('Webcam recording is not supported in this browser.');
-      return;
-    }
-
-    if (!isCameraOpen) {
-      const opened = await openCamera();
-      if (opened) {
-        await startRecording();
-      }
-      return;
-    }
-
-    if (!isVideoRecording && !recordedVideo) {
-      await startRecording();
-    }
-  };
-
-  const handleScreenShareClick = async () => {
-    if (!isScreenSupported) {
-      setToast('Screen recording is not supported in this browser.');
-      return;
-    }
-
-    if (!isScreenPickerOpen) {
-      await startScreenRecording();
-    }
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = () => {
-        setAttachedFile({
-          name: file.name,
-          type: file.type,
-          size: file.size,
-          dataUrl: reader.result as string,
-          source: 'upload',
-        });
-        setToast(`Attached: ${file.name}`);
-      };
-      reader.onerror = () => {
-        setToast('Could not read the selected file.');
-      };
-      reader.readAsDataURL(file);
-    }
-    e.target.value = '';
-  };
-
-  const handleCloseVideoDialog = () => {
-    closeRecorder();
-  };
-
-  const handleSendRecordedVideo = async () => {
-    if (isProcessingVideo) {
-      return;
-    }
-
-    if (!isVideoRecording && !recordedVideo) {
-      await startRecording();
-      return;
-    }
-
-    if (isVideoRecording) {
-      setIsProcessingVideo(true);
-      const stoppedVideo = await stopRecording();
-      setIsProcessingVideo(false);
-      if (!stoppedVideo) {
-        setToast('Could not finish the video recording.');
-      }
-      return;
-    }
-
-    if (recordedVideo) {
-      const videoToSend = recordedVideo;
-      setIsProcessingVideo(true);
-      onSend('', videoToSend);
-      setToast('Video message sent');
-      closeRecorder();
-      setIsProcessingVideo(false);
-    }
-  };
-
-  const handleSendRecordedScreen = async () => {
-    if (isProcessingVideo) {
-      return;
-    }
-
-    if (!isScreenRecording && !recordedScreen) {
-      await startScreenRecording();
-      return;
-    }
-
-    if (isScreenRecording) {
-      setIsProcessingVideo(true);
-      const stoppedScreen = await stopScreenRecording();
-      setIsProcessingVideo(false);
-      if (!stoppedScreen) {
-        setToast('Could not finish the screen recording.');
-      }
-      return;
-    }
-
-    if (recordedScreen) {
-      const screenToSend = recordedScreen;
-      setIsProcessingVideo(true);
-      onSend('', screenToSend);
-      setToast('Screen recording sent');
-      closeScreenRecorder();
-      setIsProcessingVideo(false);
-    }
+    void Promise.resolve(onSend(prompt));
   };
 
   return (
@@ -362,16 +486,31 @@ export default function ChatInput({ onSend, onPause, isStreaming, selectedModel 
       sx={{
         borderTop: '1px solid var(--border)',
         bgcolor: 'var(--card)',
-        px: 2.5,
+        px: { xs: 1.5, md: 2.5 },
         pt: 1.5,
         pb: 1.5,
       }}
     >
       <input
-        ref={fileInputRef}
+        ref={documentInputRef}
         type="file"
-        accept=".pdf,.txt,.csv,.json,.md,.doc,.docx,.png,.jpg,.jpeg,.gif,.webp,.mp3,.wav,.m4a,.webm"
-        onChange={handleFileChange}
+        multiple
+        accept=".pdf,.txt,.csv,.json,.md,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.zip"
+        onChange={(event) => {
+          void handleAddFiles(event.target.files, 'document');
+          event.target.value = '';
+        }}
+        style={{ display: 'none' }}
+      />
+      <input
+        ref={imageInputRef}
+        type="file"
+        multiple
+        accept="image/*"
+        onChange={(event) => {
+          void handleAddFiles(event.target.files, 'image');
+          event.target.value = '';
+        }}
         style={{ display: 'none' }}
       />
 
@@ -379,24 +518,89 @@ export default function ChatInput({ onSend, onPause, isStreaming, selectedModel 
         sx={{
           display: 'flex',
           flexDirection: 'column',
-          bgcolor: 'var(--bg)',
+          gap: 1,
+          bgcolor: '#FCFAF7',
           border: '1px solid',
-          borderColor: isListening ? '#7C3AED' : 'var(--border)',
-          borderRadius: 'var(--radius)',
-          overflow: 'hidden',
-          transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
-          '&:focus-within': {
-            borderColor: isListening ? '#7C3AED' : 'var(--accent)',
-            boxShadow: isListening ? '0 0 0 3px rgba(124,58,237,0.15)' : '0 0 0 3px var(--accent-border)',
-          },
+          borderColor: voiceRecorder.isRecording
+            ? 'rgba(220,38,38,0.45)'
+            : dictation.isListening
+              ? 'rgba(8,145,178,0.45)'
+              : 'rgba(28,26,22,0.09)',
+          borderRadius: '24px',
+          px: { xs: 1, md: 1.5 },
+          py: 1,
+          boxShadow: voiceRecorder.isRecording
+            ? '0 0 0 4px rgba(220,38,38,0.08), 0 16px 40px rgba(220,38,38,0.08)'
+            : dictation.isListening
+              ? '0 0 0 4px rgba(8,145,178,0.08), 0 16px 40px rgba(8,145,178,0.08)'
+              : '0 12px 28px rgba(28,26,22,0.06)',
+          transition: 'box-shadow 180ms ease, border-color 180ms ease',
         }}
       >
+        {(voiceRecorder.isRecording || dictation.isListening) && (
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 1,
+              px: 1,
+              py: 0.5,
+              borderRadius: '16px',
+              bgcolor: voiceRecorder.isRecording ? '#FEF2F2' : '#ECFEFF',
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Box
+                sx={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: '50%',
+                  bgcolor: voiceRecorder.isRecording ? '#DC2626' : '#0891B2',
+                  animation: 'pulse 1.2s ease-in-out infinite',
+                }}
+              />
+              <Typography sx={{ fontSize: '0.77rem', fontWeight: 700, color: 'var(--text)' }}>
+                {voiceRecorder.isRecording
+                  ? `Recording voice note ${formatDuration(voiceRecorder.elapsedSeconds)}`
+                  : 'Listening for voice typing'}
+              </Typography>
+            </Box>
+
+            {voiceRecorder.isRecording ? (
+              <Button size="small" onClick={cancelVoiceNote} sx={{ textTransform: 'none', color: '#B91C1C' }}>
+                Cancel
+              </Button>
+            ) : (
+              <Button
+                size="small"
+                onClick={() => {
+                  dictation.stopListening();
+                  setInterimText('');
+                }}
+                sx={{ textTransform: 'none', color: '#0E7490' }}
+              >
+                Stop
+              </Button>
+            )}
+          </Box>
+        )}
+
         <textarea
           ref={textareaRef}
-          rows={2}
-          placeholder={isListening ? t('chat.input.listening') : t('chat.input.placeholder')}
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
+          rows={1}
+          placeholder={
+            dictation.isListening
+              ? 'Speak to type...'
+              : voiceRecorder.isRecording
+                ? 'Voice note is recording...'
+                : t('chat.input.placeholder')
+          }
+          value={displayValue}
+          onChange={(event) => {
+            setInterimText('');
+            setValue(event.target.value);
+          }}
           onKeyDown={handleKeyDown}
           style={{
             width: '100%',
@@ -405,233 +609,198 @@ export default function ChatInput({ onSend, onPause, isStreaming, selectedModel 
             resize: 'none',
             background: 'transparent',
             color: 'var(--text)',
-            fontSize: '0.9375rem',
-            lineHeight: 1.6,
-            padding: '12px 16px 4px',
-            minHeight: '68px',
-            maxHeight: '168px',
+            fontSize: '0.96rem',
+            lineHeight: 1.65,
+            padding: '8px 10px 0',
+            minHeight: '64px',
+            maxHeight: '180px',
+            fontFamily: 'inherit',
           }}
         />
 
-        {attachedFile && attachedFile.source !== 'voice' && (
+        {attachments.length > 0 && (
           <Box
             sx={{
-              display: 'flex',
-              alignItems: 'center',
+              display: 'grid',
+              gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' },
               gap: 1,
-              mx: 1.5,
-              mb: 0.5,
-              px: 1.25,
-              py: 0.75,
-              borderRadius: '10px',
-              bgcolor: 'var(--bg2)',
-              border: '1px solid var(--border)',
+              px: 1,
             }}
           >
-            <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text)' }}>
-                {attachedFile.name}
-              </Typography>
-              <Typography sx={{ fontSize: '0.6875rem', color: 'var(--text3)' }}>
-                File attached
-              </Typography>
-            </Box>
-            <IconButton size="small" onClick={() => setAttachedFile(null)} sx={{ color: 'var(--text3)' }}>
-              <Close sx={{ fontSize: 16 }} />
-            </IconButton>
-          </Box>
-        )}
-
-        {isListening && (
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 2, pb: 0.5 }}>
-            <Box
-              sx={{
-                width: 6,
-                height: 6,
-                borderRadius: '50%',
-                bgcolor: '#7C3AED',
-                animation: 'pulse 1.2s ease-in-out infinite',
-                '@keyframes pulse': {
-                  '0%, 100%': { opacity: 1, transform: 'scale(1)' },
-                  '50%': { opacity: 0.5, transform: 'scale(0.8)' },
-                },
-              }}
-            />
-            <Typography sx={{ fontSize: '0.7rem', color: '#7C3AED', fontWeight: 500 }}>
-              {t('chat.input.listeningIndicator')}
-            </Typography>
+            {attachments.map((attachment) => (
+              <AttachmentPreview key={attachment.id} attachment={attachment} onRemove={removeAttachment} />
+            ))}
           </Box>
         )}
 
         <Box
           sx={{
             display: 'flex',
-            alignItems: 'center',
+            alignItems: { xs: 'stretch', sm: 'center' },
             justifyContent: 'space-between',
-            px: 1.5,
-            pb: 1.25,
+            gap: 1,
+            px: 0.5,
             pt: 0.5,
+            flexWrap: 'wrap',
           }}
         >
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-            <Tooltip title={t('chat.input.tooltipEmoji')}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap' }}>
+            <Tooltip title="Voice note">
               <IconButton
-                size="small"
-                sx={{
-                  width: 28,
-                  height: 28,
-                  borderRadius: '8px',
-                  color: 'var(--text3)',
-                  '&:hover': { color: '#D97706', bgcolor: '#FFFBEB' },
-                }}
-              >
-                <EmojiEmotions sx={{ fontSize: 16 }} />
-              </IconButton>
-            </Tooltip>
-            <Tooltip title={t('chat.input.tooltipFile')}>
-              <IconButton
-                size="small"
-                onClick={handleFileClick}
-                sx={{
-                  width: 28,
-                  height: 28,
-                  borderRadius: '8px',
-                  color: 'var(--text3)',
-                  '&:hover': { color: '#2563EB', bgcolor: '#EFF6FF' },
-                }}
-              >
-                <AttachFile sx={{ fontSize: 16 }} />
-              </IconButton>
-            </Tooltip>
-            <Tooltip title={isCameraOpen ? 'Open video recorder' : 'Record video message'}>
-              <IconButton
-                size="small"
                 onClick={() => {
-                  void handleVideoClick();
+                  void handleVoiceNoteToggle();
                 }}
+                disabled={isSendingMedia}
                 sx={{
-                  width: 28,
-                  height: 28,
-                  borderRadius: '8px',
-                  color: isVideoRecording ? '#fff' : 'var(--text3)',
-                  bgcolor: isVideoRecording ? '#DC2626' : 'transparent',
+                  width: 38,
+                  height: 38,
+                  borderRadius: '12px',
+                  border: '1px solid rgba(220,38,38,0.18)',
+                  bgcolor: voiceRecorder.isRecording ? '#DC2626' : '#FEF2F2',
+                  color: voiceRecorder.isRecording ? '#fff' : '#DC2626',
                   '&:hover': {
-                    color: isVideoRecording ? '#fff' : '#DC2626',
-                    bgcolor: isVideoRecording ? '#B91C1C' : '#FEF2F2',
+                    bgcolor: voiceRecorder.isRecording ? '#B91C1C' : '#FEE2E2',
                   },
                 }}
               >
-                {isVideoRecording ? <StopCircle sx={{ fontSize: 16 }} /> : <Videocam sx={{ fontSize: 16 }} />}
+                {voiceRecorder.isRecording ? <StopCircle sx={{ fontSize: 18 }} /> : <Mic sx={{ fontSize: 18 }} />}
               </IconButton>
             </Tooltip>
-            <Tooltip title={isScreenPickerOpen ? 'Screen recorder open' : 'Share screen'}>
+
+            <Tooltip title="Attach file">
               <IconButton
-                size="small"
-                onClick={() => {
-                  void handleScreenShareClick();
-                }}
+                onClick={() => documentInputRef.current?.click()}
                 sx={{
-                  width: 28,
-                  height: 28,
-                  borderRadius: '8px',
-                  color: isScreenRecording ? '#fff' : 'var(--text3)',
-                  bgcolor: isScreenRecording ? '#059669' : 'transparent',
+                  width: 38,
+                  height: 38,
+                  borderRadius: '12px',
+                  border: '1px solid rgba(217,119,6,0.18)',
+                  bgcolor: '#FFF7ED',
+                  color: '#D97706',
+                  '&:hover': { bgcolor: '#FFEDD5' },
+                }}
+              >
+                <AttachFile sx={{ fontSize: 18 }} />
+              </IconButton>
+            </Tooltip>
+
+            <Tooltip title="Upload image">
+              <IconButton
+                onClick={() => imageInputRef.current?.click()}
+                sx={{
+                  width: 38,
+                  height: 38,
+                  borderRadius: '12px',
+                  border: '1px solid rgba(37,99,235,0.18)',
+                  bgcolor: '#EFF6FF',
+                  color: '#2563EB',
+                  '&:hover': { bgcolor: '#DBEAFE' },
+                }}
+              >
+                <ImageIcon sx={{ fontSize: 18 }} />
+              </IconButton>
+            </Tooltip>
+
+            <Tooltip title="Voice typing">
+              <IconButton
+                onClick={handleVoiceTypingToggle}
+                disabled={voiceRecorder.isRecording}
+                sx={{
+                  width: 38,
+                  height: 38,
+                  borderRadius: '12px',
+                  border: '1px solid rgba(8,145,178,0.18)',
+                  bgcolor: dictation.isListening ? '#0891B2' : '#ECFEFF',
+                  color: dictation.isListening ? '#fff' : '#0891B2',
                   '&:hover': {
-                    color: isScreenRecording ? '#fff' : '#059669',
-                    bgcolor: isScreenRecording ? '#047857' : '#ECFDF5',
+                    bgcolor: dictation.isListening ? '#0E7490' : '#CFFAFE',
                   },
                 }}
               >
-                <ScreenShare sx={{ fontSize: 16 }} />
+                <KeyboardVoice sx={{ fontSize: 18 }} />
               </IconButton>
             </Tooltip>
-            <Tooltip title={t('chat.input.tooltipReactions')}>
+
+            <Tooltip title="Record video">
               <IconButton
-                size="small"
+                onClick={() => {
+                  void handleVideoButton();
+                }}
                 sx={{
-                  width: 28,
-                  height: 28,
-                  borderRadius: '8px',
-                  color: 'var(--text3)',
-                  '&:hover': { color: '#7C3AED', bgcolor: '#F3EEFF' },
+                  width: 38,
+                  height: 38,
+                  borderRadius: '12px',
+                  border: '1px solid rgba(220,38,38,0.18)',
+                  bgcolor: videoRecorder.isCameraOpen ? '#FEE2E2' : '#FFF5F5',
+                  color: '#DC2626',
+                  '&:hover': { bgcolor: '#FEE2E2' },
                 }}
               >
-                <AddReaction sx={{ fontSize: 16 }} />
+                <Videocam sx={{ fontSize: 18 }} />
+              </IconButton>
+            </Tooltip>
+
+            <Tooltip title="Record screen">
+              <IconButton
+                onClick={() => {
+                  void handleScreenButton();
+                }}
+                sx={{
+                  width: 38,
+                  height: 38,
+                  borderRadius: '12px',
+                  border: '1px solid rgba(5,150,105,0.18)',
+                  bgcolor: screenRecorder.isPickerOpen ? '#D1FAE5' : '#ECFDF5',
+                  color: '#059669',
+                  '&:hover': { bgcolor: '#D1FAE5' },
+                }}
+              >
+                <ScreenShare sx={{ fontSize: 18 }} />
               </IconButton>
             </Tooltip>
           </Box>
 
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 'auto' }}>
             <Chip
               label={modelInfo?.name ?? selectedModel}
               size="small"
-              onClick={() => {}}
               sx={{
-                height: 26,
-                borderRadius: '13px',
-                bgcolor: 'var(--bg2)',
-                border: '1px solid var(--border)',
+                height: 30,
+                borderRadius: '999px',
+                bgcolor: 'rgba(28,26,22,0.04)',
+                border: '1px solid rgba(28,26,22,0.08)',
                 color: 'var(--text2)',
-                fontSize: '0.7rem',
-                fontWeight: 600,
-                cursor: 'pointer',
-                '& .MuiChip-label': { px: 1 },
-                '&:hover': {
-                  bgcolor: 'var(--bg3)',
-                  borderColor: 'var(--border2)',
-                },
+                fontSize: '0.72rem',
+                fontWeight: 700,
               }}
             />
 
-            <Tooltip title={isListening ? t('chat.input.tooltipStopListening') : t('chat.input.tooltipVoice')}>
-              <IconButton
-                size="small"
-                onClick={handleMicClick}
-                sx={{
-                  width: 28,
-                  height: 28,
-                  borderRadius: '8px',
-                  color: isListening ? '#fff' : 'var(--text3)',
-                  bgcolor: isListening ? '#7C3AED' : 'transparent',
-                  transition: 'all 0.15s ease',
-                  '&:hover': {
-                    color: isListening ? '#fff' : 'var(--text)',
-                    bgcolor: isListening ? '#6D28D9' : 'var(--bg2)',
-                  },
-                }}
-              >
-                {isListening ? <MicOff sx={{ fontSize: 16 }} /> : <Mic sx={{ fontSize: 16 }} />}
-              </IconButton>
-            </Tooltip>
-
-            <Tooltip title={isStreaming ? 'Pause response' : 'Send (Enter)'}>
+            <Tooltip title={isStreaming ? 'Pause response' : 'Send'}>
               <span>
                 <IconButton
-                  onClick={isStreaming ? onPause : handleSend}
-                  disabled={!isStreaming && (!value.trim() && !attachedFile)}
-                  size="small"
+                  onClick={isStreaming ? onPause : () => void handleSend()}
+                  disabled={!isStreaming && !canSend}
                   sx={{
-                    width: 34,
-                    height: 34,
-                    bgcolor: isStreaming ? '#9B2042' : (value.trim() || attachedFile) ? 'var(--accent)' : 'var(--bg3)',
-                    color: isStreaming || (value.trim() || attachedFile) ? '#fff' : 'var(--text3)',
-                    borderRadius: '10px',
-                    transition: 'all 0.15s ease',
+                    minWidth: 108,
+                    height: 42,
+                    borderRadius: '999px',
+                    px: 1.8,
+                    bgcolor: isStreaming ? '#7F1D1D' : canSend ? 'var(--accent)' : 'rgba(200,98,42,0.35)',
+                    color: '#fff',
+                    gap: 0.75,
                     '&:hover': {
-                      bgcolor: isStreaming ? '#861C39' : (value.trim() || attachedFile) ? 'var(--accent2)' : 'var(--bg3)',
-                      transform: isStreaming || (value.trim() || attachedFile) ? 'scale(1.05)' : 'none',
+                      bgcolor: isStreaming ? '#6B1515' : canSend ? 'var(--accent2)' : 'rgba(200,98,42,0.35)',
                     },
                     '&.Mui-disabled': {
-                      bgcolor: 'var(--bg3)',
-                      color: 'var(--text3)',
+                      bgcolor: 'rgba(200,98,42,0.35)',
+                      color: '#fff',
                     },
                   }}
                 >
-                  {isStreaming ? (
-                    <Pause sx={{ fontSize: 16 }} />
-                  ) : (
-                    <Send sx={{ fontSize: 14 }} />
-                  )}
+                  {isStreaming ? <Pause sx={{ fontSize: 18 }} /> : <Send sx={{ fontSize: 16 }} />}
+                  <Typography sx={{ fontSize: '0.82rem', fontWeight: 700, color: 'inherit' }}>
+                    {isStreaming ? 'Pause' : 'Let’s go'}
+                  </Typography>
                 </IconButton>
               </span>
             </Tooltip>
@@ -646,38 +815,32 @@ export default function ChatInput({ onSend, onPause, isStreaming, selectedModel 
           gap: 0.75,
           mt: 1,
           overflowX: 'auto',
-          pb: 0.5,
+          pb: 0.25,
           '&::-webkit-scrollbar': { display: 'none' },
           scrollbarWidth: 'none',
         }}
       >
-        {ACTION_CHIP_KEYS.map(({ icon: Icon, labelKey, color, bg, border }) => (
+        {ACTION_CHIP_KEYS.map(({ labelKey, color, bg, border }) => (
           <Chip
             key={labelKey}
-            icon={<Icon sx={{ fontSize: '14px !important', color: `${color} !important` }} />}
             label={t(labelKey)}
             size="small"
             onClick={() => handleChipClick(t(labelKey))}
             sx={{
-              height: 28,
-              borderRadius: '14px',
+              height: 30,
+              borderRadius: '999px',
               bgcolor: bg,
               border: `1px solid ${border}`,
               color,
-              fontSize: '0.7rem',
-              fontWeight: 600,
+              fontSize: '0.72rem',
+              fontWeight: 700,
               cursor: 'pointer',
               flexShrink: 0,
-              '& .MuiChip-label': { px: 0.75 },
-              '& .MuiChip-icon': { ml: 0.75 },
-              transition: 'all 0.15s ease',
+              '& .MuiChip-label': { px: 1 },
               '&:hover': {
                 bgcolor: color,
                 color: '#fff',
                 borderColor: color,
-                '& .MuiChip-icon': { color: '#fff !important' },
-                transform: 'translateY(-1px)',
-                boxShadow: `0 3px 8px ${color}33`,
               },
             }}
           />
@@ -685,175 +848,106 @@ export default function ChatInput({ onSend, onPause, isStreaming, selectedModel 
       </Box>
 
       <Snackbar
-        open={!!combinedError || !!toast}
+        open={Boolean(visibleToast)}
         autoHideDuration={4000}
         onClose={() => setToast(null)}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       >
-        <Alert
-          severity={
-            toast === 'Voice message sent' || toast === 'Video message sent' || toast === 'Screen recording sent' || toast?.includes('Attached')
-              ? 'success'
-              : 'error'
-          }
-          onClose={() => setToast(null)}
-          sx={{ width: '100%' }}
-        >
-          {toast || combinedError}
+        <Alert severity={visibleToast?.severity ?? 'info'} onClose={() => setToast(null)} sx={{ width: '100%' }}>
+          {visibleToast?.message}
         </Alert>
       </Snackbar>
 
-      <Dialog
-        open={isCameraOpen}
-        onClose={handleCloseVideoDialog}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogContent sx={{ p: 2, bgcolor: '#111', color: '#fff' }}>
-          <Typography sx={{ fontSize: '0.9rem', fontWeight: 600, mb: 1.5 }}>
-            {recordedVideo ? 'Preview video message' : isVideoRecording ? 'Recording video message...' : 'Camera ready'}
-          </Typography>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
-            <Typography sx={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.72)' }}>
-              {isVideoRecording ? `Recording ${formatDuration(elapsedSeconds)}` : recordedVideo ? 'Ready to send' : 'Tap record to start'}
-            </Typography>
-            <Button
-              onClick={() => {
-                void switchCamera();
-              }}
-              startIcon={<Cameraswitch />}
-              disabled={isVideoRecording || isProcessingVideo}
-              sx={{ color: 'rgba(255,255,255,0.85)' }}
-            >
-              Switch
-            </Button>
-          </Box>
-          {recordedVideo ? (
-            <video
-              ref={recordedVideoRef}
-              controls
-              src={recordedVideo.dataUrl}
-              poster=""
-              style={{
-                width: '100%',
-                borderRadius: '14px',
-                backgroundColor: '#000',
-                minHeight: '280px',
-              }}
-            />
-          ) : (
-            <video
-              ref={setVideoPreviewNode}
-              autoPlay
-              muted
-              playsInline
-              style={{
-                width: '100%',
-                borderRadius: '14px',
-                backgroundColor: '#000',
-                minHeight: '280px',
-                objectFit: 'cover',
-              }}
-            />
-          )}
-        </DialogContent>
-        <DialogActions sx={{ px: 2, pb: 2, bgcolor: '#111' }}>
-          <Button onClick={handleCloseVideoDialog} sx={{ color: 'rgba(255,255,255,0.75)' }}>
-            Cancel
-          </Button>
-          {recordedVideo && (
-            <Button
-              onClick={() => {
-                void retakeRecording();
-              }}
-              startIcon={<Replay />}
-              disabled={isProcessingVideo}
-              sx={{ color: 'rgba(255,255,255,0.85)' }}
-            >
-              Retake
-            </Button>
-          )}
-          <Button
-            onClick={() => {
-              void handleSendRecordedVideo();
-            }}
-            variant="contained"
-            color="error"
-            disabled={isProcessingVideo}
-          >
-            {isProcessingVideo ? 'Processing...' : isVideoRecording ? 'Stop' : recordedVideo ? 'Send video' : 'Record'}
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <CaptureDialog
+        open={videoRecorder.isCameraOpen}
+        title={
+          videoRecorder.recordedVideo
+            ? 'Preview video message'
+            : videoRecorder.isRecording
+              ? 'Recording video message'
+              : 'Camera ready'
+        }
+        subtitle={
+          videoRecorder.isRecording
+            ? `Recording ${formatDuration(videoRecorder.elapsedSeconds)}`
+            : videoRecorder.recordedVideo
+              ? 'Review the clip before sending it.'
+              : 'Record a short video note.'
+        }
+        previewStream={videoRecorder.previewStream}
+        recordedFile={videoRecorder.recordedVideo}
+        onClose={videoRecorder.closeRecorder}
+        onRetake={() => {
+          void videoRecorder.retakeRecording();
+        }}
+        onPrimary={() => {
+          if (videoRecorder.isRecording) {
+            void videoRecorder.stopRecording();
+            return;
+          }
 
-      <Dialog open={isScreenPickerOpen} onClose={closeScreenRecorder} maxWidth="sm" fullWidth>
-        <DialogContent sx={{ p: 2, bgcolor: '#111', color: '#fff' }}>
-          <Typography sx={{ fontSize: '0.9rem', fontWeight: 600, mb: 1.5 }}>
-            {recordedScreen ? 'Preview screen recording' : isScreenRecording ? 'Recording shared screen...' : 'Screen ready'}
-          </Typography>
-          <Typography sx={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.72)', mb: 1.5 }}>
-            {isScreenRecording
-              ? `Recording ${formatDuration(screenElapsedSeconds)}`
-              : recordedScreen
-                ? 'Ready to send'
-                : 'Choose an area or window to record'}
-          </Typography>
-          {recordedScreen ? (
-            <video
-              ref={recordedScreenRef}
-              controls
-              src={recordedScreen.dataUrl}
-              style={{
-                width: '100%',
-                borderRadius: '14px',
-                backgroundColor: '#000',
-                minHeight: '280px',
-              }}
-            />
-          ) : (
-            <video
-              ref={setScreenPreviewNode}
-              autoPlay
-              muted
-              playsInline
-              style={{
-                width: '100%',
-                borderRadius: '14px',
-                backgroundColor: '#000',
-                minHeight: '280px',
-                objectFit: 'contain',
-              }}
-            />
-          )}
-        </DialogContent>
-        <DialogActions sx={{ px: 2, pb: 2, bgcolor: '#111' }}>
-          <Button onClick={closeScreenRecorder} sx={{ color: 'rgba(255,255,255,0.75)' }}>
-            Cancel
-          </Button>
-          {recordedScreen && (
-            <Button
-              onClick={() => {
-                void retakeScreenRecording();
-              }}
-              startIcon={<Replay />}
-              disabled={isProcessingVideo}
-              sx={{ color: 'rgba(255,255,255,0.85)' }}
-            >
-              Retake
-            </Button>
-          )}
-          <Button
-            onClick={() => {
-              void handleSendRecordedScreen();
-            }}
-            variant="contained"
-            color="success"
-            disabled={isProcessingVideo}
-          >
-            {isProcessingVideo ? 'Processing...' : isScreenRecording ? 'Stop' : recordedScreen ? 'Send recording' : 'Start'}
-          </Button>
-        </DialogActions>
-      </Dialog>
+          if (videoRecorder.recordedVideo) {
+            void sendRecordedAttachment(videoRecorder.recordedVideo, 'Video message sent', videoRecorder.closeRecorder);
+            return;
+          }
+
+          void videoRecorder.startRecording();
+        }}
+        primaryLabel={
+          videoRecorder.isRecording ? 'Stop' : videoRecorder.recordedVideo ? 'Send video' : 'Record'
+        }
+        primaryColor="error"
+        onSwitchCamera={() => {
+          void videoRecorder.switchCamera();
+        }}
+        switchDisabled={videoRecorder.isRecording || isSendingMedia}
+      />
+
+      <CaptureDialog
+        open={screenRecorder.isPickerOpen}
+        title={
+          screenRecorder.recordedVideo
+            ? 'Preview screen recording'
+            : screenRecorder.isRecording
+              ? 'Recording your screen'
+              : 'Screen ready'
+        }
+        subtitle={
+          screenRecorder.isRecording
+            ? `Recording ${formatDuration(screenRecorder.elapsedSeconds)}`
+            : screenRecorder.recordedVideo
+              ? 'Review the capture before sending it.'
+              : 'Choose a tab, app, or display to record.'
+        }
+        previewStream={screenRecorder.previewStream}
+        recordedFile={screenRecorder.recordedVideo}
+        onClose={screenRecorder.closeRecorder}
+        onRetake={() => {
+          void screenRecorder.retakeRecording();
+        }}
+        onPrimary={() => {
+          if (screenRecorder.isRecording) {
+            void screenRecorder.stopRecording();
+            return;
+          }
+
+          if (screenRecorder.recordedVideo) {
+            void sendRecordedAttachment(
+              screenRecorder.recordedVideo,
+              'Screen recording sent',
+              screenRecorder.closeRecorder
+            );
+            return;
+          }
+
+          void screenRecorder.startRecording();
+        }}
+        primaryLabel={
+          screenRecorder.isRecording ? 'Stop' : screenRecorder.recordedVideo ? 'Send recording' : 'Start'
+        }
+        primaryColor="success"
+        previewMode="contain"
+      />
     </Box>
   );
 }

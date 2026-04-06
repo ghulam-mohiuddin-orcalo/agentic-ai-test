@@ -2,6 +2,11 @@
 
 import { useState, useRef, useCallback } from 'react';
 import type { AttachedFile } from '@/store/slices/chatSlice';
+import {
+  createAttachmentFromFile,
+  getFileExtension,
+  getSupportedRecorderMimeType,
+} from '@/lib/chatAttachments';
 
 type BrowserSpeechRecognitionConstructor = new () => BrowserSpeechRecognition;
 
@@ -50,27 +55,13 @@ interface UseSpeechRecognitionReturn {
   stopListening: () => void;
 }
 
-function getSupportedAudioMimeType(): string {
-  if (typeof MediaRecorder === 'undefined' || typeof MediaRecorder.isTypeSupported !== 'function') {
-    return 'audio/webm';
-  }
-
-  const candidates = [
-    'audio/webm;codecs=opus',
-    'audio/webm',
-    'audio/mp4',
-    'audio/ogg;codecs=opus',
-    'audio/ogg',
-  ];
-
-  return candidates.find((type) => MediaRecorder.isTypeSupported(type)) || 'audio/webm';
-}
-
-function getAudioExtension(mimeType: string): string {
-  if (mimeType.includes('ogg')) return 'ogg';
-  if (mimeType.includes('mp4')) return 'm4a';
-  return 'webm';
-}
+const AUDIO_CANDIDATES = [
+  'audio/webm;codecs=opus',
+  'audio/webm',
+  'audio/mp4',
+  'audio/ogg;codecs=opus',
+  'audio/ogg',
+];
 
 export function useSpeechRecognition(
   onResult?: (result: SpeechCaptureResult) => void,
@@ -182,7 +173,7 @@ export function useSpeechRecognition(
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         mediaStreamRef.current = stream;
 
-        const mimeType = getSupportedAudioMimeType();
+        const mimeType = getSupportedRecorderMimeType(AUDIO_CANDIDATES, 'audio/webm');
         const recorder = new MediaRecorder(stream, { mimeType });
         mediaRecorderRef.current = recorder;
 
@@ -211,17 +202,17 @@ export function useSpeechRecognition(
 
           try {
             const resolvedMimeType = audioBlob.type || mimeType || 'audio/webm';
-            const objectUrl = URL.createObjectURL(audioBlob);
+            const extension = getFileExtension(resolvedMimeType, 'webm');
 
-            onResult?.({
-              transcript: '',
-              audioFile: {
-                name: `voice-message-${Date.now()}.${getAudioExtension(resolvedMimeType)}`,
-                type: resolvedMimeType,
-                size: audioBlob.size,
-                dataUrl: objectUrl,
-                source: 'voice',
-              },
+            void createAttachmentFromFile(audioBlob, {
+              name: `voice-message-${Date.now()}.${extension}`,
+              type: resolvedMimeType,
+              source: 'voice',
+            }).then((audioFile) => {
+              onResult?.({
+                transcript: '',
+                audioFile,
+              });
             });
           } catch {
             setError('Could not process the voice message.');

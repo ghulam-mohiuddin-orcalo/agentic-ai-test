@@ -2,31 +2,17 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { AttachedFile } from '@/store/slices/chatSlice';
+import {
+  createAttachmentFromFile,
+  getFileExtension,
+  getSupportedRecorderMimeType,
+} from '@/lib/chatAttachments';
 
-function readBlobAsDataUrl(blob: Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = () => reject(reader.error);
-    reader.readAsDataURL(blob);
-  });
-}
-
-function getSupportedScreenMimeType(): string {
-  const candidates = [
-    'video/webm;codecs=vp9,opus',
-    'video/webm;codecs=vp8,opus',
-    'video/webm',
-  ];
-
-  for (const mimeType of candidates) {
-    if (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(mimeType)) {
-      return mimeType;
-    }
-  }
-
-  return 'video/webm';
-}
+const SCREEN_CANDIDATES = [
+  'video/webm;codecs=vp9,opus',
+  'video/webm;codecs=vp8,opus',
+  'video/webm',
+];
 
 export function useScreenRecorder() {
   const [isRecording, setIsRecording] = useState(false);
@@ -69,17 +55,12 @@ export function useScreenRecorder() {
     setRecordedVideo(null);
   }, [stopPreview, stopTimer]);
 
-  useEffect(() => {
-    return () => {
-      stopTimer();
-      stopPreview();
-    };
-  }, [stopPreview, stopTimer]);
+  useEffect(() => closeRecorder, [closeRecorder]);
 
   const startRecording = useCallback(async () => {
     if (!isSupported) {
       setError('Screen recording is not supported in this browser.');
-      return;
+      return false;
     }
 
     setError(null);
@@ -100,16 +81,20 @@ export function useScreenRecorder() {
       const [videoTrack] = stream.getVideoTracks();
       videoTrack?.addEventListener('ended', () => {
         if (mediaRecorderRef.current?.state === 'recording') {
-          if (mediaRecorderRef.current.state === 'recording') {
+          try {
             mediaRecorderRef.current.requestData();
-            mediaRecorderRef.current.stop();
+          } catch {
+            // Ignore unsupported requestData implementations.
           }
+          mediaRecorderRef.current.stop();
         } else {
           closeRecorder();
         }
       });
 
-      const recorder = new MediaRecorder(stream, { mimeType: getSupportedScreenMimeType() });
+      const recorder = new MediaRecorder(stream, {
+        mimeType: getSupportedRecorderMimeType(SCREEN_CANDIDATES, 'video/webm'),
+      });
       mediaRecorderRef.current = recorder;
 
       recorder.ondataavailable = (event) => {
@@ -122,15 +107,17 @@ export function useScreenRecorder() {
         setIsRecording(true);
         stopTimer();
         timerRef.current = setInterval(() => {
-          setElapsedSeconds((prev) => prev + 1);
+          setElapsedSeconds((previous) => previous + 1);
         }, 1000);
       };
 
       recorder.start(250);
+      return true;
     } catch (screenError) {
       console.error('Screen recording failed:', screenError);
       setError('Screen sharing was cancelled or is unavailable.');
       closeRecorder();
+      return false;
     }
   }, [closeRecorder, isSupported, stopTimer]);
 
@@ -144,6 +131,8 @@ export function useScreenRecorder() {
     stopTimer();
 
     return new Promise((resolve) => {
+      const recordedDuration = elapsedSeconds;
+
       recorder.onstop = () => {
         const videoBlob = new Blob(chunksRef.current, {
           type: recorder.mimeType || 'video/webm',
@@ -153,19 +142,20 @@ export function useScreenRecorder() {
         mediaRecorderRef.current = null;
 
         if (videoBlob.size === 0) {
+          setError('Could not process the screen recording.');
           resolve(null);
           return;
         }
 
-        void readBlobAsDataUrl(videoBlob)
-          .then((dataUrl) => {
-            const file: AttachedFile = {
-              name: `screen-recording-${Date.now()}.webm`,
-              type: videoBlob.type || 'video/webm',
-              size: videoBlob.size,
-              dataUrl,
-              source: 'upload',
-            };
+        const extension = getFileExtension(videoBlob.type, 'webm');
+
+        void createAttachmentFromFile(videoBlob, {
+          name: `screen-recording-${Date.now()}.${extension}`,
+          type: videoBlob.type || 'video/webm',
+          source: 'screen',
+          durationSeconds: recordedDuration,
+        })
+          .then((file) => {
             setRecordedVideo(file);
             resolve(file);
           })
@@ -175,19 +165,21 @@ export function useScreenRecorder() {
           });
       };
 
-      if (recorder.state === 'recording') {
+      try {
         recorder.requestData();
+      } catch {
+        // Ignore unsupported requestData implementations.
       }
 
       recorder.stop();
     });
-  }, [recordedVideo, stopPreview, stopTimer]);
+  }, [elapsedSeconds, recordedVideo, stopPreview, stopTimer]);
 
   const retakeRecording = useCallback(async () => {
     setRecordedVideo(null);
     chunksRef.current = [];
     setElapsedSeconds(0);
-    await startRecording();
+    return startRecording();
   }, [startRecording]);
 
   return {

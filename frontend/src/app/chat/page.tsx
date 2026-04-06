@@ -13,7 +13,6 @@ import { useAuth } from '@/hooks/useAuth';
 import { useTranslation } from 'react-i18next';
 import { GuestChatStorage } from '@/lib/guestChat';
 import { streamChatMessage } from '@/lib/chatApi';
-import { consumePendingVoiceMessage, peekPendingVoiceMessage } from '@/lib/pendingVoiceMessage';
 import { useCreateConversationMutation, useAddMessageMutation } from '@/store/api/chatApi';
 import { useAppSelector, useAppDispatch } from '@/store/hooks';
 import { clearInitialPrompt, type AttachedFile } from '@/store/slices/chatSlice';
@@ -24,7 +23,46 @@ interface Message {
   content: string;
   timestamp: Date;
   modelId?: string;
-  attachment?: AttachedFile;
+  attachments?: AttachedFile[];
+}
+
+function describeAttachmentsForTransport(attachments?: AttachedFile[]) {
+  if (!attachments?.length) {
+    return '';
+  }
+
+  return attachments
+    .map((attachment) => {
+      switch (attachment.kind) {
+        case 'audio':
+          return 'Voice note';
+        case 'image':
+          return `Image: ${attachment.name}`;
+        case 'screen':
+          return 'Screen recording';
+        case 'video':
+          return 'Video message';
+        default:
+          return `File: ${attachment.name}`;
+      }
+    })
+    .join(', ');
+}
+
+function getConversationTitle(content: string, attachments?: AttachedFile[]) {
+  const trimmed = content.trim();
+  if (trimmed) {
+    return trimmed.slice(0, 50);
+  }
+
+  return attachments?.[0]?.name || describeAttachmentsForTransport(attachments) || 'New chat';
+}
+
+function getHistory(messages: Message[]) {
+  return messages.map((message) => ({
+    role: message.role,
+    content: message.content.trim() || describeAttachmentsForTransport(message.attachments),
+  }));
 }
 
 function ChatPageContent() {
@@ -33,7 +71,7 @@ function ChatPageContent() {
   const dispatch = useAppDispatch();
   const searchParams = useSearchParams();
   const initialPrompt = useAppSelector((state) => state.chat.initialPrompt);
-  const attachedFile = useAppSelector((state) => state.chat.attachedFile);
+  const attachedFiles = useAppSelector((state) => state.chat.attachedFiles);
   const selectedModel = useAppSelector((state) => state.chat.selectedModel);
 
   const [messages, setMessages] = useState<Message[]>([]);
@@ -45,6 +83,7 @@ function ChatPageContent() {
   const hasAutoSent = useRef(false);
   const streamAbortRef = useRef<AbortController | null>(null);
   const messagesRef = useRef<Message[]>([]);
+  const conversationIdRef = useRef<string | null>(null);
 
   const hasMessages = messages.length > 0 || isStreaming;
 
@@ -53,42 +92,99 @@ function ChatPageContent() {
   }, [messages]);
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      if (peekPendingVoiceMessage()) {
+    conversationIdRef.current = conversationId;
+  }, [conversationId]);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      return;
+    }
+
+    const guestConvId = GuestChatStorage.getCurrentConversationId();
+    if (!guestConvId) {
+      return;
+    }
+
+    const guestMessages = GuestChatStorage.getMessages(guestConvId);
+    setMessages(
+      guestMessages
+        .filter((message) => message.role !== 'system')
+        .map((message) => ({
+          id: message.id,
+          role: message.role as 'user' | 'assistant',
+          content: message.content,
+          timestamp: new Date(message.timestamp),
+          attachments:
+            message.attachments ??
+            ('attachment' in message && message.attachment
+              ? [message.attachment as AttachedFile]
+              : undefined),
+        }))
+    );
+    setConversationId(guestConvId);
+  }, [isAuthenticated]);
+
+  const ensureConversation = useCallback(
+    async (title: string) => {
+      if (conversationIdRef.current) {
+        return conversationIdRef.current;
+      }
+
+      if (isAuthenticated) {
+        const conversation = await createConversation({
+          modelId: selectedModel,
+          title,
+        }).unwrap();
+
+        conversationIdRef.current = conversation.id;
+        setConversationId(conversation.id);
+        return conversation.id;
+      }
+
+      const guestConversation = GuestChatStorage.createConversation(selectedModel, title);
+      GuestChatStorage.setCurrentConversationId(guestConversation.id);
+      conversationIdRef.current = guestConversation.id;
+      setConversationId(guestConversation.id);
+      return guestConversation.id;
+    },
+    [createConversation, isAuthenticated, selectedModel]
+  );
+
+  const persistAssistantMessage = useCallback(
+    async (convId: string | null, content: string) => {
+      if (!convId || !content.trim()) {
         return;
       }
 
-      const guestConvId = GuestChatStorage.getCurrentConversationId();
-      if (guestConvId) {
-        const guestMessages = GuestChatStorage.getMessages(guestConvId);
-        setMessages(
-          guestMessages
-            .filter((msg) => msg.role !== 'system')
-            .map((msg) => ({
-              id: msg.id,
-              role: msg.role as 'user' | 'assistant',
-              content: msg.content,
-              timestamp: new Date(msg.timestamp),
-              attachment: msg.attachment,
-            }))
-        );
-        setConversationId(guestConvId);
+      if (!isAuthenticated) {
+        GuestChatStorage.addMessage(convId, 'assistant', content);
+        return;
       }
-    }
-  }, [isAuthenticated]);
+
+      try {
+        await addMessage({
+          conversationId: convId,
+          role: 'assistant',
+          content,
+        });
+      } catch (error) {
+        console.error('Failed to persist assistant message:', error);
+      }
+    },
+    [addMessage, isAuthenticated]
+  );
 
   const streamViaApi = useCallback(
-    async (content: string, convId: string | null) => {
+    async (transportText: string, convId: string | null) => {
       const abortController = new AbortController();
       streamAbortRef.current = abortController;
 
       try {
-        const history = messagesRef.current.map((m) => ({ role: m.role, content: m.content }));
         const stream = streamChatMessage({
-          message: content,
+          message: transportText,
           model: selectedModel,
           conversationId: convId || undefined,
-          history,
+          history: getHistory(messagesRef.current),
           signal: abortController.signal,
         });
 
@@ -105,7 +201,7 @@ function ChatPageContent() {
           return;
         }
 
-        const assistantMsg: Message = {
+        const assistantMessage: Message = {
           id: crypto.randomUUID(),
           role: 'assistant',
           content: fullResponse,
@@ -113,229 +209,118 @@ function ChatPageContent() {
           modelId: selectedModel,
         };
 
-        setMessages((prev) => [...prev, assistantMsg]);
-
-        if (convId) {
-          if (!isAuthenticated) {
-            GuestChatStorage.addMessage(convId, 'assistant', fullResponse);
-          } else {
-            try {
-              await addMessage({
-                conversationId: convId,
-                role: 'assistant',
-                content: fullResponse,
-              });
-            } catch (error) {
-              console.error('Failed to save assistant message:', error);
-            }
-          }
-        }
-
+        setMessages((previous) => [...previous, assistantMessage]);
+        await persistAssistantMessage(convId, fullResponse);
         setIsStreaming(false);
         setStreamingContent('');
       } catch (error) {
-        if (error instanceof DOMException && error.name === 'AbortError') {
-          return;
+        if (!(error instanceof DOMException && error.name === 'AbortError')) {
+          console.error('Failed to stream response:', error);
         }
-        console.error('Failed to stream response:', error);
         setIsStreaming(false);
-        setStreamingContent('');
       } finally {
+        setStreamingContent('');
         streamAbortRef.current = null;
       }
     },
-    [selectedModel, isAuthenticated, addMessage]
+    [persistAssistantMessage, selectedModel]
   );
 
   const handleSend = useCallback(
-    async (content: string, file?: AttachedFile | null) => {
-      const normalizedContent = content.trim();
-      const isVoiceMessage = file?.source === 'voice';
-      const isVideoMessage = file?.type.startsWith('video/') ?? false;
-      const displayText = normalizedContent || (isVoiceMessage || isVideoMessage ? '' : content);
-      const transportText =
-        normalizedContent ||
-        (isVideoMessage ? 'Video message' : isVoiceMessage ? 'Voice message' : content);
-      const conversationTitle = normalizedContent || file?.name || (isVideoMessage ? 'Video message' : 'Voice message');
+    async (content: string, nextAttachments: AttachedFile[] = []) => {
+      if (isStreaming) {
+        return;
+      }
 
-      const userMsg: Message = {
+      const trimmed = content.trim();
+      const attachments = nextAttachments.filter(Boolean);
+      if (!trimmed && attachments.length === 0) {
+        return;
+      }
+
+      const transportText = trimmed || describeAttachmentsForTransport(attachments);
+      const conversationTitle = getConversationTitle(content, attachments);
+
+      const userMessage: Message = {
         id: crypto.randomUUID(),
         role: 'user',
-        content: displayText,
+        content: trimmed,
         timestamp: new Date(),
-        attachment: file || undefined,
+        attachments: attachments.length ? attachments : undefined,
       };
 
-      setMessages((prev) => [...prev, userMsg]);
+      setMessages((previous) => [...previous, userMessage]);
       setIsStreaming(true);
       setStreamingContent('');
 
-      if (isAuthenticated) {
-        let convId = conversationId;
+      let convId: string | null = null;
 
-        try {
-          if (!convId) {
-            const conv = await createConversation({
-              modelId: selectedModel,
-              title: conversationTitle.slice(0, 50),
-            }).unwrap();
-            convId = conv.id;
-            setConversationId(conv.id);
-          }
+      try {
+        convId = await ensureConversation(conversationTitle);
 
-          if (convId) {
-            await addMessage({
-              conversationId: convId,
-              role: 'user',
-              content: transportText,
-              attachments: file ? [file] : undefined,
-            });
-          }
-        } catch (error) {
-          console.error('Failed to persist, falling back to stream-only:', error);
+        if (isAuthenticated) {
+          await addMessage({
+            conversationId: convId,
+            role: 'user',
+            content: transportText,
+            attachments: attachments.length ? attachments : undefined,
+          });
+        } else {
+          GuestChatStorage.addMessage(convId, 'user', trimmed, attachments.length ? attachments : undefined);
         }
-
-        await streamViaApi(transportText, convId);
-      } else {
-        let guestConvId = conversationId;
-        if (!guestConvId) {
-          const guestConv = GuestChatStorage.createConversation(selectedModel, conversationTitle.slice(0, 50));
-          guestConvId = guestConv.id;
-          setConversationId(guestConv.id);
-          GuestChatStorage.setCurrentConversationId(guestConv.id);
-        }
-
-        GuestChatStorage.addMessage(guestConvId, 'user', displayText, file || undefined);
-        await streamViaApi(transportText, guestConvId);
+      } catch (error) {
+        console.error('Failed to persist user message before streaming:', error);
       }
+
+      await streamViaApi(transportText, convId);
     },
-    [selectedModel, conversationId, isAuthenticated, createConversation, addMessage, streamViaApi]
+    [addMessage, ensureConversation, isAuthenticated, isStreaming, streamViaApi]
   );
 
   const handlePauseStreaming = useCallback(() => {
     streamAbortRef.current?.abort();
 
-    setMessages((prev) => {
-      if (!streamingContent.trim()) {
-        return prev;
-      }
+    const partial = streamingContent.trim();
+    if (!partial) {
+      setIsStreaming(false);
+      setStreamingContent('');
+      return;
+    }
 
-      return [
-        ...prev,
-        {
-          id: crypto.randomUUID(),
-          role: 'assistant',
-          content: streamingContent,
-          timestamp: new Date(),
-          modelId: selectedModel,
-        },
-      ];
-    });
+    const assistantMessage: Message = {
+      id: crypto.randomUUID(),
+      role: 'assistant',
+      content: partial,
+      timestamp: new Date(),
+      modelId: selectedModel,
+    };
 
+    setMessages((previous) => [...previous, assistantMessage]);
+    void persistAssistantMessage(conversationIdRef.current, partial);
     setIsStreaming(false);
     setStreamingContent('');
-  }, [selectedModel, streamingContent]);
+  }, [persistAssistantMessage, selectedModel, streamingContent]);
 
   useEffect(() => {
     if (hasAutoSent.current) {
       return;
     }
 
-    const pendingVoiceMessage = consumePendingVoiceMessage();
-    if (!pendingVoiceMessage) {
+    const prompt = initialPrompt ?? searchParams.get('q');
+    if (!prompt && attachedFiles.length === 0) {
       return;
     }
 
-    const sendPendingVoiceMessage = async () => {
-      try {
-        const userMsg: Message = {
-          id: crypto.randomUUID(),
-          role: 'user',
-          content: '',
-          timestamp: new Date(),
-          attachment: pendingVoiceMessage,
-        };
-
-        hasAutoSent.current = true;
-        dispatch(clearInitialPrompt());
-
-        setMessages((prev) => [...prev, userMsg]);
-        setIsStreaming(true);
-        setStreamingContent('');
-
-        const conversationTitle = pendingVoiceMessage.name || 'Voice message';
-        const transportText = 'Voice message';
-
-        if (isAuthenticated) {
-          let convId = conversationId;
-
-          try {
-            if (!convId) {
-              const conv = await createConversation({
-                modelId: selectedModel,
-                title: conversationTitle.slice(0, 50),
-              }).unwrap();
-              convId = conv.id;
-              setConversationId(conv.id);
-            }
-
-            if (convId) {
-              await addMessage({
-                conversationId: convId,
-                role: 'user',
-                content: transportText,
-                attachments: [pendingVoiceMessage],
-              });
-            }
-          } catch (error) {
-            console.error('Failed to persist pending voice message:', error);
-          }
-
-          await streamViaApi(transportText, convId);
-          return;
-        }
-
-        let guestConvId = conversationId;
-        if (!guestConvId) {
-          const guestConv = GuestChatStorage.createConversation(selectedModel, conversationTitle.slice(0, 50));
-          guestConvId = guestConv.id;
-          setConversationId(guestConv.id);
-          GuestChatStorage.setCurrentConversationId(guestConv.id);
-        }
-
-        GuestChatStorage.addMessage(guestConvId, 'user', '', pendingVoiceMessage);
-        await streamViaApi(transportText, guestConvId);
-      } catch (error) {
-        console.error('Failed to send pending voice message:', error);
-        setIsStreaming(false);
-        setStreamingContent('');
-      }
-    };
-
-    void sendPendingVoiceMessage();
-  }, [addMessage, conversationId, createConversation, dispatch, isAuthenticated, selectedModel, streamViaApi]);
-
-  useEffect(() => {
-    if (hasAutoSent.current || peekPendingVoiceMessage()) return;
-
-    const prompt = initialPrompt ?? searchParams.get('q');
-    if (!prompt && !attachedFile) return;
-
     hasAutoSent.current = true;
-
-    if (initialPrompt || attachedFile) {
-      const file = attachedFile;
-      dispatch(clearInitialPrompt());
-      handleSend(prompt ?? '', file);
-    } else if (prompt) {
-      handleSend(prompt);
-    }
-  }, [initialPrompt, attachedFile, searchParams, handleSend, dispatch]);
+    dispatch(clearInitialPrompt());
+    void handleSend(prompt ?? '', attachedFiles);
+  }, [attachedFiles, dispatch, handleSend, initialPrompt, searchParams]);
 
   const handleNewChat = useCallback(() => {
     streamAbortRef.current?.abort();
     setMessages([]);
     setConversationId(null);
+    conversationIdRef.current = null;
     setStreamingContent('');
     setIsStreaming(false);
     hasAutoSent.current = false;
@@ -348,6 +333,7 @@ function ChatPageContent() {
     streamAbortRef.current?.abort();
     setMessages([]);
     setConversationId(null);
+    conversationIdRef.current = null;
     setStreamingContent('');
     setIsStreaming(false);
     hasAutoSent.current = false;
@@ -358,31 +344,37 @@ function ChatPageContent() {
   }, [isAuthenticated]);
 
   const handleExportChat = useCallback(() => {
-    if (messages.length === 0) return;
+    if (messages.length === 0) {
+      return;
+    }
 
     const exportData = {
       model: selectedModel,
       exportedAt: new Date().toISOString(),
-      messages: messages.map((m) => ({
-        role: m.role,
-        content: m.content,
-        timestamp: m.timestamp.toISOString(),
-        modelId: m.modelId,
+      messages: messages.map((message) => ({
+        role: message.role,
+        content: message.content,
+        timestamp: message.timestamp.toISOString(),
+        modelId: message.modelId,
+        attachments: message.attachments,
       })),
     };
 
     const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `nexusai-chat-${Date.now()}.json`;
-    a.click();
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `nexusai-chat-${Date.now()}.json`;
+    anchor.click();
     URL.revokeObjectURL(url);
   }, [messages, selectedModel]);
 
-  const handleActionClick = useCallback((title: string) => {
-    handleSend(`I'd like to: ${title}`);
-  }, [handleSend]);
+  const handleActionClick = useCallback(
+    (title: string) => {
+      void handleSend(`I'd like to: ${title}`);
+    },
+    [handleSend]
+  );
 
   return (
     <Box
@@ -476,12 +468,7 @@ function ChatPageContent() {
           </Box>
         )}
 
-        <ChatInput
-          onSend={handleSend}
-          onPause={handlePauseStreaming}
-          isStreaming={isStreaming}
-          selectedModel={selectedModel}
-        />
+        <ChatInput onSend={handleSend} onPause={handlePauseStreaming} isStreaming={isStreaming} selectedModel={selectedModel} />
       </Box>
 
       <QuickActionsPanel
