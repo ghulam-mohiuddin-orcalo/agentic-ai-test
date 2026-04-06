@@ -13,8 +13,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { useTranslation } from 'react-i18next';
 import { GuestChatStorage } from '@/lib/guestChat';
 import { streamChatMessage } from '@/lib/chatApi';
+import { consumePendingVoiceMessage, peekPendingVoiceMessage } from '@/lib/pendingVoiceMessage';
 import { useCreateConversationMutation, useAddMessageMutation } from '@/store/api/chatApi';
-import { getSocket } from '@/lib/socket';
 import { useAppSelector, useAppDispatch } from '@/store/hooks';
 import { clearInitialPrompt, type AttachedFile } from '@/store/slices/chatSlice';
 
@@ -43,12 +43,21 @@ function ChatPageContent() {
   const [createConversation] = useCreateConversationMutation();
   const [addMessage] = useAddMessageMutation();
   const hasAutoSent = useRef(false);
+  const streamAbortRef = useRef<AbortController | null>(null);
+  const messagesRef = useRef<Message[]>([]);
 
   const hasMessages = messages.length > 0 || isStreaming;
 
-  // Load guest messages on mount
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
+
   useEffect(() => {
     if (!isAuthenticated) {
+      if (peekPendingVoiceMessage()) {
+        return;
+      }
+
       const guestConvId = GuestChatStorage.getCurrentConversationId();
       if (guestConvId) {
         const guestMessages = GuestChatStorage.getMessages(guestConvId);
@@ -60,6 +69,7 @@ function ChatPageContent() {
               role: msg.role as 'user' | 'assistant',
               content: msg.content,
               timestamp: new Date(msg.timestamp),
+              attachment: msg.attachment,
             }))
         );
         setConversationId(guestConvId);
@@ -67,142 +77,32 @@ function ChatPageContent() {
     }
   }, [isAuthenticated]);
 
-  // Setup Socket.IO for authenticated users
-  useEffect(() => {
-    if (!isAuthenticated) return;
-
-    const socket = getSocket();
-    socket.connect();
-
-    socket.on('chat:chunk', (data: { delta: string }) => {
-      setStreamingContent((prev) => prev + data.delta);
-    });
-
-    socket.on('chat:done', async () => {
-      const assistantMsg: Message = {
-        id: crypto.randomUUID(),
-        role: 'assistant',
-        content: streamingContent,
-        timestamp: new Date(),
-        modelId: selectedModel,
-      };
-
-      setMessages((prev) => [...prev, assistantMsg]);
-      setIsStreaming(false);
-
-      if (conversationId) {
-        try {
-          await addMessage({
-            conversationId,
-            role: 'assistant',
-            content: streamingContent,
-          });
-        } catch (error) {
-          console.error('Failed to save assistant message:', error);
-        }
-      }
-
-      setStreamingContent('');
-    });
-
-    socket.on('chat:error', (data: { message: string }) => {
-      console.error('Chat error:', data.message);
-      setIsStreaming(false);
-      setStreamingContent('');
-    });
-
-    return () => {
-      socket.off('chat:chunk');
-      socket.off('chat:done');
-      socket.off('chat:error');
-      socket.disconnect();
-    };
-  }, [isAuthenticated, conversationId, streamingContent, selectedModel, addMessage]);
-
-  const handleSend = useCallback(
-    async (content: string, file?: AttachedFile | null) => {
-      const userMsg: Message = {
-        id: crypto.randomUUID(),
-        role: 'user',
-        content,
-        timestamp: new Date(),
-        attachment: file || undefined,
-      };
-
-      setMessages((prev) => [...prev, userMsg]);
-      setIsStreaming(true);
-      setStreamingContent('');
-
-      if (isAuthenticated) {
-        // Authenticated: try DB + Socket.IO, fall back to API layer
-        const socket = getSocket();
-        let convId = conversationId;
-
-        try {
-          if (!convId) {
-            const conv = await createConversation({
-              modelId: selectedModel,
-              title: content.slice(0, 50),
-            }).unwrap();
-            convId = conv.id;
-            setConversationId(conv.id);
-          }
-
-          if (convId) {
-            await addMessage({
-              conversationId: convId,
-              role: 'user',
-              content,
-            });
-          }
-        } catch (error) {
-          console.error('Failed to persist, falling back to stream-only:', error);
-        }
-
-        // Check if socket is connected; if not, use API layer
-        if (socket.connected) {
-          socket.emit('chat', {
-            conversationId: convId ?? undefined,
-            modelId: selectedModel,
-            messages: messages.map((m) => ({ role: m.role, content: m.content })).concat([{ role: 'user', content }]),
-          });
-        } else {
-          // Fallback to API layer (which falls back to mock)
-          await streamViaApi(content, convId);
-        }
-      } else {
-        // Guest mode: use API layer (real → mock fallback)
-        let guestConvId = conversationId;
-        if (!guestConvId) {
-          const guestConv = GuestChatStorage.createConversation(selectedModel, content.slice(0, 50));
-          guestConvId = guestConv.id;
-          setConversationId(guestConv.id);
-          GuestChatStorage.setCurrentConversationId(guestConv.id);
-        }
-
-        GuestChatStorage.addMessage(guestConvId, 'user', content);
-        await streamViaApi(content, guestConvId);
-      }
-    },
-    [selectedModel, conversationId, isAuthenticated, messages, createConversation, addMessage]
-  );
-
-  // Shared streaming via the API layer
   const streamViaApi = useCallback(
     async (content: string, convId: string | null) => {
+      const abortController = new AbortController();
+      streamAbortRef.current = abortController;
+
       try {
-        const history = messages.map((m) => ({ role: m.role, content: m.content }));
+        const history = messagesRef.current.map((m) => ({ role: m.role, content: m.content }));
         const stream = streamChatMessage({
           message: content,
           model: selectedModel,
           conversationId: convId || undefined,
           history,
+          signal: abortController.signal,
         });
 
         let fullResponse = '';
         for await (const chunk of stream) {
           fullResponse += chunk;
           setStreamingContent(fullResponse);
+        }
+
+        if (!fullResponse.trim()) {
+          setIsStreaming(false);
+          setStreamingContent('');
+          streamAbortRef.current = null;
+          return;
         }
 
         const assistantMsg: Message = {
@@ -215,42 +115,225 @@ function ChatPageContent() {
 
         setMessages((prev) => [...prev, assistantMsg]);
 
-        // Save to guest storage if applicable
-        if (!isAuthenticated && convId) {
-          GuestChatStorage.addMessage(convId, 'assistant', fullResponse);
+        if (convId) {
+          if (!isAuthenticated) {
+            GuestChatStorage.addMessage(convId, 'assistant', fullResponse);
+          } else {
+            try {
+              await addMessage({
+                conversationId: convId,
+                role: 'assistant',
+                content: fullResponse,
+              });
+            } catch (error) {
+              console.error('Failed to save assistant message:', error);
+            }
+          }
         }
 
         setIsStreaming(false);
         setStreamingContent('');
       } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') {
+          return;
+        }
         console.error('Failed to stream response:', error);
         setIsStreaming(false);
         setStreamingContent('');
+      } finally {
+        streamAbortRef.current = null;
       }
     },
-    [selectedModel, messages, isAuthenticated]
+    [selectedModel, isAuthenticated, addMessage]
   );
 
-  // Auto-send initial prompt from Redux or query params
-  useEffect(() => {
-    if (hasAutoSent.current) return;
+  const handleSend = useCallback(
+    async (content: string, file?: AttachedFile | null) => {
+      const normalizedContent = content.trim();
+      const isVoiceMessage = file?.source === 'voice';
+      const isVideoMessage = file?.type.startsWith('video/') ?? false;
+      const displayText = normalizedContent || (isVoiceMessage || isVideoMessage ? '' : content);
+      const transportText =
+        normalizedContent ||
+        (isVideoMessage ? 'Video message' : isVoiceMessage ? 'Voice message' : content);
+      const conversationTitle = normalizedContent || file?.name || (isVideoMessage ? 'Video message' : 'Voice message');
 
-    const prompt = initialPrompt || searchParams.get('q');
-    if (!prompt) return;
+      const userMsg: Message = {
+        id: crypto.randomUUID(),
+        role: 'user',
+        content: displayText,
+        timestamp: new Date(),
+        attachment: file || undefined,
+      };
+
+      setMessages((prev) => [...prev, userMsg]);
+      setIsStreaming(true);
+      setStreamingContent('');
+
+      if (isAuthenticated) {
+        let convId = conversationId;
+
+        try {
+          if (!convId) {
+            const conv = await createConversation({
+              modelId: selectedModel,
+              title: conversationTitle.slice(0, 50),
+            }).unwrap();
+            convId = conv.id;
+            setConversationId(conv.id);
+          }
+
+          if (convId) {
+            await addMessage({
+              conversationId: convId,
+              role: 'user',
+              content: transportText,
+              attachments: file ? [file] : undefined,
+            });
+          }
+        } catch (error) {
+          console.error('Failed to persist, falling back to stream-only:', error);
+        }
+
+        await streamViaApi(transportText, convId);
+      } else {
+        let guestConvId = conversationId;
+        if (!guestConvId) {
+          const guestConv = GuestChatStorage.createConversation(selectedModel, conversationTitle.slice(0, 50));
+          guestConvId = guestConv.id;
+          setConversationId(guestConv.id);
+          GuestChatStorage.setCurrentConversationId(guestConv.id);
+        }
+
+        GuestChatStorage.addMessage(guestConvId, 'user', displayText, file || undefined);
+        await streamViaApi(transportText, guestConvId);
+      }
+    },
+    [selectedModel, conversationId, isAuthenticated, createConversation, addMessage, streamViaApi]
+  );
+
+  const handlePauseStreaming = useCallback(() => {
+    streamAbortRef.current?.abort();
+
+    setMessages((prev) => {
+      if (!streamingContent.trim()) {
+        return prev;
+      }
+
+      return [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
+          role: 'assistant',
+          content: streamingContent,
+          timestamp: new Date(),
+          modelId: selectedModel,
+        },
+      ];
+    });
+
+    setIsStreaming(false);
+    setStreamingContent('');
+  }, [selectedModel, streamingContent]);
+
+  useEffect(() => {
+    if (hasAutoSent.current) {
+      return;
+    }
+
+    const pendingVoiceMessage = consumePendingVoiceMessage();
+    if (!pendingVoiceMessage) {
+      return;
+    }
+
+    const sendPendingVoiceMessage = async () => {
+      try {
+        const userMsg: Message = {
+          id: crypto.randomUUID(),
+          role: 'user',
+          content: '',
+          timestamp: new Date(),
+          attachment: pendingVoiceMessage,
+        };
+
+        hasAutoSent.current = true;
+        dispatch(clearInitialPrompt());
+
+        setMessages((prev) => [...prev, userMsg]);
+        setIsStreaming(true);
+        setStreamingContent('');
+
+        const conversationTitle = pendingVoiceMessage.name || 'Voice message';
+        const transportText = 'Voice message';
+
+        if (isAuthenticated) {
+          let convId = conversationId;
+
+          try {
+            if (!convId) {
+              const conv = await createConversation({
+                modelId: selectedModel,
+                title: conversationTitle.slice(0, 50),
+              }).unwrap();
+              convId = conv.id;
+              setConversationId(conv.id);
+            }
+
+            if (convId) {
+              await addMessage({
+                conversationId: convId,
+                role: 'user',
+                content: transportText,
+                attachments: [pendingVoiceMessage],
+              });
+            }
+          } catch (error) {
+            console.error('Failed to persist pending voice message:', error);
+          }
+
+          await streamViaApi(transportText, convId);
+          return;
+        }
+
+        let guestConvId = conversationId;
+        if (!guestConvId) {
+          const guestConv = GuestChatStorage.createConversation(selectedModel, conversationTitle.slice(0, 50));
+          guestConvId = guestConv.id;
+          setConversationId(guestConv.id);
+          GuestChatStorage.setCurrentConversationId(guestConv.id);
+        }
+
+        GuestChatStorage.addMessage(guestConvId, 'user', '', pendingVoiceMessage);
+        await streamViaApi(transportText, guestConvId);
+      } catch (error) {
+        console.error('Failed to send pending voice message:', error);
+        setIsStreaming(false);
+        setStreamingContent('');
+      }
+    };
+
+    void sendPendingVoiceMessage();
+  }, [addMessage, conversationId, createConversation, dispatch, isAuthenticated, selectedModel, streamViaApi]);
+
+  useEffect(() => {
+    if (hasAutoSent.current || peekPendingVoiceMessage()) return;
+
+    const prompt = initialPrompt ?? searchParams.get('q');
+    if (!prompt && !attachedFile) return;
 
     hasAutoSent.current = true;
 
-    if (initialPrompt) {
+    if (initialPrompt || attachedFile) {
       const file = attachedFile;
       dispatch(clearInitialPrompt());
-      handleSend(prompt, file);
-    } else {
+      handleSend(prompt ?? '', file);
+    } else if (prompt) {
       handleSend(prompt);
     }
   }, [initialPrompt, attachedFile, searchParams, handleSend, dispatch]);
 
-  // Quick action handlers
   const handleNewChat = useCallback(() => {
+    streamAbortRef.current?.abort();
     setMessages([]);
     setConversationId(null);
     setStreamingContent('');
@@ -262,6 +345,7 @@ function ChatPageContent() {
   }, [isAuthenticated]);
 
   const handleClearHistory = useCallback(() => {
+    streamAbortRef.current?.abort();
     setMessages([]);
     setConversationId(null);
     setStreamingContent('');
@@ -313,10 +397,8 @@ function ChatPageContent() {
         overflow: 'hidden',
       }}
     >
-      {/* Left: Models Sidebar (reads from Redux + API) */}
       <ModelsSidebar />
 
-      {/* Center: Main chat area */}
       <Box
         sx={{
           flex: 1,
@@ -327,7 +409,6 @@ function ChatPageContent() {
           minWidth: 0,
         }}
       >
-        {/* Guest Banner */}
         {!isAuthenticated && (
           <Alert
             severity="info"
@@ -382,7 +463,6 @@ function ChatPageContent() {
           </Alert>
         )}
 
-        {/* Message area or Welcome screen */}
         {hasMessages ? (
           <MessageThread
             messages={messages}
@@ -396,15 +476,14 @@ function ChatPageContent() {
           </Box>
         )}
 
-        {/* Input at bottom */}
         <ChatInput
           onSend={handleSend}
+          onPause={handlePauseStreaming}
           isStreaming={isStreaming}
           selectedModel={selectedModel}
         />
       </Box>
 
-      {/* Right: Quick Actions Panel (reads model from Redux) */}
       <QuickActionsPanel
         onNewChat={handleNewChat}
         onClearHistory={handleClearHistory}

@@ -2,14 +2,8 @@
 
 import { useEffect, useRef } from 'react';
 import { Box, Typography, Avatar } from '@mui/material';
-import { SmartToy, Person, InsertDriveFile, Videocam } from '@mui/icons-material';
-
-interface AttachedFile {
-  name: string;
-  type: string;
-  size: number;
-  dataUrl: string;
-}
+import { SmartToy, Person, InsertDriveFile, Videocam, Audiotrack } from '@mui/icons-material';
+import type { AttachedFile } from '@/store/slices/chatSlice';
 
 interface Message {
   id: string;
@@ -36,6 +30,39 @@ function formatFileSize(bytes: number) {
 function FileChip({ file }: { file: AttachedFile }) {
   const isImage = file.type.startsWith('image/');
   const isVideo = file.type.startsWith('video/');
+  const isAudio = file.type.startsWith('audio/');
+
+  if (isAudio) {
+    return (
+      <Box
+        sx={{
+          mt: 1,
+          p: 1,
+          borderRadius: '12px',
+          bgcolor: 'rgba(255,255,255,0.12)',
+          border: '1px solid rgba(255,255,255,0.2)',
+          minWidth: 260,
+        }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.75 }}>
+          <Audiotrack sx={{ fontSize: 16, color: 'rgba(255,255,255,0.85)' }} />
+          <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, color: '#fff' }}>
+            {file.name}
+          </Typography>
+        </Box>
+        <Box
+          component="audio"
+          controls
+          src={file.dataUrl}
+          sx={{
+            width: '100%',
+            height: 36,
+            filter: 'invert(1) saturate(0) brightness(1.2)',
+          }}
+        />
+      </Box>
+    );
+  }
 
   const renderIcon = () => {
     if (isImage) {
@@ -53,6 +80,36 @@ function FileChip({ file }: { file: AttachedFile }) {
     }
     return <InsertDriveFile sx={{ fontSize: 16, color: 'rgba(255,255,255,0.85)' }} />;
   };
+
+  if (isVideo) {
+    return (
+      <Box
+        sx={{
+          mt: 1,
+          p: 1,
+          borderRadius: '12px',
+          bgcolor: 'rgba(255,255,255,0.12)',
+          border: '1px solid rgba(255,255,255,0.2)',
+          minWidth: 260,
+        }}
+      >
+        <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, color: '#fff', mb: 0.75 }}>
+          {file.name}
+        </Typography>
+        <Box
+          component="video"
+          controls
+          src={file.dataUrl}
+          sx={{
+            width: '100%',
+            maxWidth: 320,
+            borderRadius: '10px',
+            bgcolor: '#000',
+          }}
+        />
+      </Box>
+    );
+  }
 
   return (
     <Box
@@ -92,6 +149,8 @@ function FileChip({ file }: { file: AttachedFile }) {
 }
 
 function UserMessage({ content, attachment }: { content: string; attachment?: AttachedFile }) {
+  const hasText = content.trim().length > 0;
+
   return (
     <Box
       sx={{
@@ -114,7 +173,7 @@ function UserMessage({ content, attachment }: { content: string; attachment?: At
             boxShadow: '0 2px 8px rgba(200,98,42,0.25)',
           }}
         >
-          {content}
+          {hasText ? content : null}
           {attachment && <FileChip file={attachment} />}
         </Box>
         <Avatar

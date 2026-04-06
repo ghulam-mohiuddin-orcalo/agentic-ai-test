@@ -7,6 +7,7 @@ interface ChatRequest {
   model: string;
   conversationId?: string;
   history?: { role: string; content: string }[];
+  signal?: AbortSignal;
 }
 
 interface ChatResponse {
@@ -82,7 +83,7 @@ export async function* streamChatMessage(
         conversationId: request.conversationId,
         messages: request.history,
       }),
-      signal: AbortSignal.timeout(30000),
+      signal: request.signal ?? AbortSignal.timeout(30000),
     });
 
     if (!res.ok || !res.body) throw new Error('Stream unavailable');
@@ -95,7 +96,10 @@ export async function* streamChatMessage(
       if (done) break;
       yield decoder.decode(value, { stream: true });
     }
-  } catch {
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      throw error;
+    }
     // Fallback to mock streaming
     yield* mockStreamResponse(request.message);
   }

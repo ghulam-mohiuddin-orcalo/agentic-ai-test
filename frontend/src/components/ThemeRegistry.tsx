@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
+import { useServerInsertedHTML } from 'next/navigation';
 import createCache from '@emotion/cache';
 import { CacheProvider } from '@emotion/react';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
@@ -41,8 +42,6 @@ export default function ThemeRegistry({ children }: { children: React.ReactNode 
   );
 
   // Collect SSR styles
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { useServerInsertedHTML } = require('next/navigation');
   useServerInsertedHTML(() => {
     // Only collect LTR styles during SSR (direction is always ltr on server)
     const cache = getLtrCache();

@@ -7,7 +7,7 @@ interface Message {
   content: string;
   createdAt: string;
   modelId?: string;
-  attachments?: any[];
+  attachments?: unknown[];
 }
 
 export interface AttachedFile {
@@ -15,6 +15,7 @@ export interface AttachedFile {
   type: string;
   size: number;
   dataUrl: string;
+  source?: 'upload' | 'voice';
 }
 
 interface ChatState {

@@ -1,6 +1,6 @@
 'use client';
 
-import { Box, Typography, Button, TextField, InputAdornment } from '@mui/material';
+import { Box, Typography, Button } from '@mui/material';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import { useTranslation } from 'react-i18next';
 
@@ -84,30 +84,31 @@ export default function NewsletterCTA() {
         }}
         onSubmit={(e) => e.preventDefault()}
       >
-        <TextField
-          type="email"
-          placeholder={t('landing.newsletter.emailPlaceholder')}
-          variant="outlined"
-          fullWidth
+        <Box
           sx={{
-            '& .MuiOutlinedInput-root': {
-              bgcolor: 'rgba(255,255,255,0.06)',
-              borderRadius: { xs: '12px 12px 0 0', sm: '12px 0 0 12px' },
-              color: '#fff',
-              height: 50,
-              '& fieldset': { border: 'none' },
-            },
-            '& .MuiOutlinedInput-input': {
-              px: 2,
-              py: 1.5,
-              fontSize: '0.9375rem',
-              '&::placeholder': {
-                color: 'rgba(255,255,255,0.35)',
-                opacity: 1,
-              },
-            },
+            flex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            bgcolor: 'rgba(255,255,255,0.06)',
+            borderRadius: { xs: '12px 12px 0 0', sm: '12px 0 0 12px' },
+            minHeight: 50,
           }}
-        />
+        >
+          <input
+            type="email"
+            placeholder={t('landing.newsletter.emailPlaceholder')}
+            style={{
+              width: '100%',
+              height: '100%',
+              border: 'none',
+              outline: 'none',
+              background: 'transparent',
+              color: '#fff',
+              fontSize: '0.9375rem',
+              padding: '12px 16px',
+            }}
+          />
+        </Box>
         <Button
           type="submit"
           variant="contained"

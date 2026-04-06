@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Box, Tooltip, Typography, Snackbar, Alert } from '@mui/material';
+import { Box, Tooltip, Typography, Snackbar, Alert, Dialog, DialogContent, DialogActions, Button } from '@mui/material';
 import {
   Mic,
   MicOff,
@@ -15,10 +15,15 @@ import {
   Computer,
   Close,
   InsertDriveFile,
+  Cameraswitch,
+  Replay,
 } from '@mui/icons-material';
 import { useAppDispatch } from '@/store/hooks';
-import { setInitialPrompt, setAttachedFile, type AttachedFile as AttachedFileType } from '@/store/slices/chatSlice';
-import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
+import { setAttachedFile, setInitialPrompt, type AttachedFile as AttachedFileType } from '@/store/slices/chatSlice';
+import { useSpeechRecognition, type SpeechCaptureResult } from '@/hooks/useSpeechRecognition';
+import { useScreenRecorder } from '@/hooks/useScreenRecorder';
+import { useVideoRecorder } from '@/hooks/useVideoRecorder';
+import { setPendingVoiceMessage } from '@/lib/pendingVoiceMessage';
 import { useTranslation } from 'react-i18next';
 
 const ACCEPTED_FILE_TYPES = {
@@ -28,7 +33,6 @@ const ACCEPTED_FILE_TYPES = {
 };
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-
 export default function HeroSearchCard() {
   const [query, setQuery] = useState('');
   const [file, setFile] = useState<AttachedFileType | null>(null);
@@ -39,14 +43,161 @@ export default function HeroSearchCard() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
-  const videoInputRef = useRef<HTMLInputElement>(null);
+  const videoPreviewRef = useRef<HTMLVideoElement>(null);
+  const recordedVideoRef = useRef<HTMLVideoElement>(null);
+  const screenPreviewRef = useRef<HTMLVideoElement>(null);
+  const recordedScreenRef = useRef<HTMLVideoElement>(null);
 
-  const onSpeechResult = useCallback((transcript: string) => {
-    setQuery((prev) => (prev ? prev + ' ' + transcript : transcript));
+  const onSpeechTypingResult = useCallback(({ transcript }: SpeechCaptureResult) => {
+    if (transcript) {
+      setQuery((prev) => (prev ? prev + ' ' + transcript : transcript));
+    }
   }, []);
 
-  const { isListening, isSupported: isSpeechSupported, error: speechError, startListening, stopListening } =
-    useSpeechRecognition(onSpeechResult);
+  const onVoiceMessageResult = useCallback((result: SpeechCaptureResult) => {
+    if (!result.audioFile) {
+      return;
+    }
+
+    setFile(result.audioFile);
+    setToast({ message: 'Voice message ready. Opening chat...', severity: 'success' });
+    setPendingVoiceMessage(result.audioFile);
+    router.push('/chat');
+  }, [router]);
+
+  const {
+    isListening: isVoiceRecording,
+    isSupported: isVoiceInputSupported,
+    error: voiceInputError,
+    startListening: startVoiceRecording,
+    stopListening: stopVoiceRecording,
+  } = useSpeechRecognition(onVoiceMessageResult, 'record');
+
+  const {
+    isListening: isVoiceTyping,
+    isSupported: isSpeechSupported,
+    error: speechError,
+    startListening,
+    stopListening,
+  } = useSpeechRecognition(onSpeechTypingResult, 'dictation');
+  const {
+    isSupported: isVideoSupported,
+    isRecording: isVideoRecording,
+    isCameraOpen,
+    previewStream,
+    recordedVideo,
+    elapsedSeconds,
+    error: videoError,
+    openCamera,
+    startRecording,
+    stopRecording,
+    closeRecorder,
+    retakeRecording,
+    switchCamera,
+  } = useVideoRecorder();
+  const {
+    isSupported: isScreenSupported,
+    isRecording: isScreenRecording,
+    isPickerOpen: isScreenPickerOpen,
+    previewStream: screenPreviewStream,
+    recordedVideo: recordedScreen,
+    elapsedSeconds: screenElapsedSeconds,
+    error: screenError,
+    startRecording: startScreenRecording,
+    stopRecording: stopScreenRecording,
+    retakeRecording: retakeScreenRecording,
+    closeRecorder: closeScreenRecorder,
+  } = useScreenRecorder();
+  const isAnyVoiceActive = isVoiceRecording || isVoiceTyping;
+  const recorderError = voiceInputError || speechError || videoError || screenError;
+
+  useEffect(() => {
+    if (!isCameraOpen || !videoPreviewRef.current) {
+      return;
+    }
+
+    videoPreviewRef.current.srcObject = previewStream;
+    if (previewStream) {
+      videoPreviewRef.current.onloadedmetadata = () => {
+        void videoPreviewRef.current?.play().catch(() => {});
+      };
+      void videoPreviewRef.current.play().catch(() => {});
+    }
+  }, [isCameraOpen, previewStream]);
+
+  const setVideoPreviewNode = useCallback((node: HTMLVideoElement | null) => {
+    videoPreviewRef.current = node;
+
+    if (!node) {
+      return;
+    }
+
+    node.muted = true;
+    node.autoplay = true;
+    node.playsInline = true;
+    node.srcObject = previewStream;
+
+    if (previewStream) {
+      node.onloadedmetadata = () => {
+        void node.play().catch(() => {});
+      };
+      void node.play().catch(() => {});
+    }
+  }, [previewStream]);
+
+  useEffect(() => {
+    if (recordedVideoRef.current && recordedVideo?.dataUrl) {
+      recordedVideoRef.current.load();
+      void recordedVideoRef.current.play().catch(() => {});
+    }
+  }, [recordedVideo]);
+
+  useEffect(() => {
+    if (!isScreenPickerOpen || !screenPreviewRef.current) {
+      return;
+    }
+
+    screenPreviewRef.current.srcObject = screenPreviewStream;
+    if (screenPreviewStream) {
+      screenPreviewRef.current.onloadedmetadata = () => {
+        void screenPreviewRef.current?.play().catch(() => {});
+      };
+      void screenPreviewRef.current.play().catch(() => {});
+    }
+  }, [isScreenPickerOpen, screenPreviewStream]);
+
+  const setScreenPreviewNode = useCallback((node: HTMLVideoElement | null) => {
+    screenPreviewRef.current = node;
+
+    if (!node) {
+      return;
+    }
+
+    node.muted = true;
+    node.autoplay = true;
+    node.playsInline = true;
+    node.srcObject = screenPreviewStream;
+
+    if (screenPreviewStream) {
+      node.onloadedmetadata = () => {
+        void node.play().catch(() => {});
+      };
+      void node.play().catch(() => {});
+    }
+  }, [screenPreviewStream]);
+
+  useEffect(() => {
+    if (recordedScreenRef.current && recordedScreen?.dataUrl) {
+      recordedScreenRef.current.load();
+      void recordedScreenRef.current.play().catch(() => {});
+    }
+  }, [recordedScreen]);
+
+  const formatDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
 
   const handleSubmit = () => {
     const trimmed = query.trim();
@@ -84,16 +235,95 @@ export default function HeroSearchCard() {
     }
   };
 
-  const handleMicClick = () => {
+  const handleVoiceInputClick = () => {
+    if (!isVoiceInputSupported) {
+      setToast({ message: t('home.search.voiceNotSupported'), severity: 'error' });
+      return;
+    }
+
+    if (isVoiceTyping) {
+      stopListening();
+    }
+
+    if (isVoiceRecording) {
+      stopVoiceRecording();
+    } else {
+      startVoiceRecording();
+    }
+  };
+
+  const handleVoiceTypingClick = () => {
     if (!isSpeechSupported) {
       setToast({ message: t('home.search.voiceNotSupported'), severity: 'error' });
       return;
     }
-    if (isListening) {
+
+    if (isVoiceRecording) {
+      stopVoiceRecording();
+    }
+
+    if (isVoiceTyping) {
       stopListening();
     } else {
       startListening();
     }
+  };
+
+  const handleVideoClick = async () => {
+    if (!isVideoSupported) {
+      setToast({ message: 'Webcam recording is not supported in this browser.', severity: 'error' });
+      return;
+    }
+
+    if (!isCameraOpen) {
+      const opened = await openCamera();
+      if (opened) {
+        await startRecording();
+      }
+      return;
+    }
+
+    if (isVideoRecording) {
+      await stopRecording();
+      return;
+    }
+
+    if (!isVideoRecording && !recordedVideo) {
+      await startRecording();
+    }
+  };
+
+  const handleScreenShareClick = async () => {
+    if (!isScreenSupported) {
+      setToast({ message: 'Screen recording is not supported in this browser.', severity: 'error' });
+      return;
+    }
+
+    if (!isScreenPickerOpen) {
+      await startScreenRecording();
+    }
+  };
+
+  const handleAttachRecordedVideo = () => {
+    if (!recordedVideo) return;
+
+    setFile(recordedVideo);
+    if (!query.trim()) {
+      setQuery(t('home.search.promptVideo', { filename: recordedVideo.name }));
+    }
+    setToast({ message: 'Video attached from webcam.', severity: 'success' });
+    closeRecorder();
+  };
+
+  const handleAttachRecordedScreen = () => {
+    if (!recordedScreen) return;
+
+    setFile(recordedScreen);
+    if (!query.trim()) {
+      setQuery(t('home.search.promptVideo', { filename: recordedScreen.name }));
+    }
+    setToast({ message: 'Screen recording attached.', severity: 'success' });
+    closeScreenRecorder();
   };
 
   const processFile = (selectedFile: File) => {
@@ -109,6 +339,7 @@ export default function HeroSearchCard() {
         type: selectedFile.type,
         size: selectedFile.size,
         dataUrl: reader.result as string,
+        source: 'upload',
       };
       setFile(attachedFile);
 
@@ -154,7 +385,10 @@ export default function HeroSearchCard() {
   const handleIconClick = (tip: string) => {
     switch (tip) {
       case t('home.search.tooltipVoice'):
-        handleMicClick();
+        handleVoiceInputClick();
+        break;
+      case t('home.search.tooltipVoiceTyping'):
+        handleVoiceTypingClick();
         break;
       case t('home.search.tooltipFile'):
         fileInputRef.current?.click();
@@ -162,23 +396,20 @@ export default function HeroSearchCard() {
       case t('home.search.tooltipImage'):
         imageInputRef.current?.click();
         break;
-      case t('home.search.tooltipVoiceTyping'):
-        handleMicClick();
-        break;
       case t('home.search.tooltipVideo'):
-        videoInputRef.current?.click();
+        void handleVideoClick();
         break;
       case t('home.search.tooltipScreen'):
-        setToast({ message: t('home.search.screenShareComingSoon'), severity: 'info' });
+        void handleScreenShareClick();
         break;
     }
   };
 
   const ICON_BUTTONS = [
-    { icon: isListening ? <MicOff sx={{ fontSize: 15 }} /> : <Mic sx={{ fontSize: 15 }} />, tip: t('home.search.tooltipVoice'), color: '#7C3AED', bg: isListening ? '#7C3AED' : '#F3EEFF', border: 'rgba(124,58,237,0.25)', activeColor: isListening ? '#fff' : undefined },
+    { icon: isVoiceRecording ? <MicOff sx={{ fontSize: 15 }} /> : <Mic sx={{ fontSize: 15 }} />, tip: t('home.search.tooltipVoice'), color: '#7C3AED', bg: isVoiceRecording ? '#7C3AED' : '#F3EEFF', border: 'rgba(124,58,237,0.25)', activeColor: isVoiceRecording ? '#fff' : undefined },
     { icon: <AttachFile sx={{ fontSize: 15 }} />, tip: t('home.search.tooltipFile'), color: '#D97706', bg: '#FFFBEB', border: 'rgba(217,119,6,0.25)' },
     { icon: <ImageIcon sx={{ fontSize: 15 }} />, tip: t('home.search.tooltipImage'), color: '#2563EB', bg: '#EFF6FF', border: 'rgba(37,99,235,0.25)' },
-    { icon: <Keyboard sx={{ fontSize: 15 }} />, tip: t('home.search.tooltipVoiceTyping'), color: '#0891B2', bg: '#E0F7FA', border: 'rgba(8,145,178,0.25)' },
+    { icon: <Keyboard sx={{ fontSize: 15 }} />, tip: t('home.search.tooltipVoiceTyping'), color: '#0891B2', bg: isVoiceTyping ? '#0891B2' : '#E0F7FA', border: 'rgba(8,145,178,0.25)', activeColor: isVoiceTyping ? '#fff' : undefined },
     { icon: <Videocam sx={{ fontSize: 15 }} />, tip: t('home.search.tooltipVideo'), color: '#DC2626', bg: '#FEF2F2', border: 'rgba(220,38,38,0.22)' },
     { icon: <ScreenShare sx={{ fontSize: 15 }} />, tip: t('home.search.tooltipScreen'), color: '#059669', bg: '#ECFDF5', border: 'rgba(5,150,105,0.25)' },
   ];
@@ -200,14 +431,6 @@ export default function HeroSearchCard() {
         onChange={handleFileChange}
         style={{ display: 'none' }}
       />
-      <input
-        ref={videoInputRef}
-        type="file"
-        accept={ACCEPTED_FILE_TYPES.video}
-        onChange={handleFileChange}
-        style={{ display: 'none' }}
-      />
-
       <Box
         sx={{
           width: '100%',
@@ -215,28 +438,27 @@ export default function HeroSearchCard() {
           mx: 'auto',
           bgcolor: '#fff',
           border: '1.5px solid',
-          borderColor: isListening ? 'rgba(124,58,237,0.5)' : 'rgba(0,0,0,0.1)',
+          borderColor: isAnyVoiceActive ? 'rgba(124,58,237,0.5)' : 'rgba(0,0,0,0.1)',
           borderRadius: '20px',
-          boxShadow: isListening ? '0 0 0 3px rgba(124,58,237,0.15)' : '0 2px 12px rgba(0,0,0,0.06)',
+          boxShadow: isAnyVoiceActive ? '0 0 0 3px rgba(124,58,237,0.15)' : '0 2px 12px rgba(0,0,0,0.06)',
           overflow: 'hidden',
           transition: 'box-shadow 0.2s, border-color 0.2s',
           '&:focus-within': {
-            borderColor: isListening ? 'rgba(124,58,237,0.5)' : 'rgba(200,98,42,0.35)',
-            boxShadow: isListening ? '0 0 0 3px rgba(124,58,237,0.15)' : '0 4px 24px rgba(200,98,42,0.1)',
+            borderColor: isAnyVoiceActive ? 'rgba(124,58,237,0.5)' : 'rgba(200,98,42,0.35)',
+            boxShadow: isAnyVoiceActive ? '0 0 0 3px rgba(124,58,237,0.15)' : '0 4px 24px rgba(200,98,42,0.1)',
           },
         }}
       >
         {/* Top Row: Textarea + avatar icons */}
         <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1, px: '18px', pt: '14px', pb: '6px' }}>
-          <Box
-            component="textarea"
+          <textarea
             ref={textareaRef}
             value={query}
             onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={isListening ? t('home.search.listening') : t('home.search.placeholder')}
+            placeholder={isVoiceTyping ? t('home.search.listening') : isVoiceRecording ? 'Recording voice message...' : t('home.search.placeholder')}
             rows={1}
-            sx={{
+            style={{
               flex: 1,
               border: 'none',
               background: 'transparent',
@@ -248,11 +470,7 @@ export default function HeroSearchCard() {
               lineHeight: 1.55,
               minHeight: '26px',
               overflow: 'hidden',
-              p: 0,
-              '&::placeholder': {
-                color: isListening ? '#7C3AED' : 'rgba(0,0,0,0.4)',
-                fontSize: '0.95rem',
-              },
+              padding: 0,
             }}
           />
           <Box sx={{ display: 'flex', alignItems: 'center', gap: '5px', flexShrink: 0, mt: '2px' }}>
@@ -352,7 +570,7 @@ export default function HeroSearchCard() {
         )}
 
         {/* Listening indicator */}
-        {isListening && (
+        {isAnyVoiceActive && (
           <Box
             sx={{
               display: 'flex',
@@ -376,7 +594,7 @@ export default function HeroSearchCard() {
               }}
             />
             <Typography sx={{ fontSize: '0.75rem', color: '#7C3AED', fontWeight: 500 }}>
-              {t('home.search.listeningIndicator')}
+              {isVoiceRecording ? 'Recording voice message' : t('home.search.listeningIndicator')}
             </Typography>
           </Box>
         )}
@@ -479,7 +697,7 @@ export default function HeroSearchCard() {
 
       {/* Speech error toast */}
       <Snackbar
-        open={!!speechError || !!toast}
+        open={!!recorderError || !!toast}
         autoHideDuration={4000}
         onClose={() => { setToast(null); }}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
@@ -489,9 +707,161 @@ export default function HeroSearchCard() {
           onClose={() => setToast(null)}
           sx={{ width: '100%' }}
         >
-          {toast?.message || speechError}
+          {toast?.message || recorderError}
         </Alert>
       </Snackbar>
+
+      <Dialog open={isCameraOpen} onClose={closeRecorder} maxWidth="sm" fullWidth>
+        <DialogContent sx={{ p: 2, bgcolor: '#111', color: '#fff' }}>
+          <Typography sx={{ fontSize: '0.9rem', fontWeight: 600, mb: 1.5 }}>
+            {recordedVideo ? 'Preview webcam video' : isVideoRecording ? 'Recording webcam video...' : 'Camera ready'}
+          </Typography>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
+            <Typography sx={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.72)' }}>
+              {isVideoRecording ? `Recording ${formatDuration(elapsedSeconds)}` : recordedVideo ? 'Ready to attach' : 'Tap record to start'}
+            </Typography>
+            <Button
+              onClick={() => {
+                void switchCamera();
+              }}
+              startIcon={<Cameraswitch />}
+              disabled={isVideoRecording}
+              sx={{ color: 'rgba(255,255,255,0.85)' }}
+            >
+              Switch
+            </Button>
+          </Box>
+          {recordedVideo ? (
+            <video
+              ref={recordedVideoRef}
+              controls
+              src={recordedVideo.dataUrl}
+              style={{
+                width: '100%',
+                minHeight: '280px',
+                borderRadius: '14px',
+                backgroundColor: '#000',
+              }}
+            />
+          ) : (
+            <video
+              ref={setVideoPreviewNode}
+              autoPlay
+              muted
+              playsInline
+              style={{
+                width: '100%',
+                minHeight: '280px',
+                borderRadius: '14px',
+                backgroundColor: '#000',
+                objectFit: 'cover',
+              }}
+            />
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 2, pb: 2, bgcolor: '#111' }}>
+          <Button onClick={closeRecorder} sx={{ color: 'rgba(255,255,255,0.75)' }}>
+            Cancel
+          </Button>
+          {recordedVideo && (
+            <Button
+              onClick={() => {
+                void retakeRecording();
+              }}
+              startIcon={<Replay />}
+              sx={{ color: 'rgba(255,255,255,0.85)' }}
+            >
+              Retake
+            </Button>
+          )}
+          <Button
+            onClick={() => {
+              if (recordedVideo) {
+                handleAttachRecordedVideo();
+              } else {
+                void handleVideoClick();
+              }
+            }}
+            variant="contained"
+            color="error"
+          >
+            {isVideoRecording ? 'Stop' : recordedVideo ? 'Attach video' : 'Record'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={isScreenPickerOpen} onClose={closeScreenRecorder} maxWidth="sm" fullWidth>
+        <DialogContent sx={{ p: 2, bgcolor: '#111', color: '#fff' }}>
+          <Typography sx={{ fontSize: '0.9rem', fontWeight: 600, mb: 1.5 }}>
+            {recordedScreen ? 'Preview screen recording' : isScreenRecording ? 'Recording shared screen...' : 'Screen ready'}
+          </Typography>
+          <Typography sx={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.72)', mb: 1.5 }}>
+            {isScreenRecording
+              ? `Recording ${formatDuration(screenElapsedSeconds)}`
+              : recordedScreen
+                ? 'Ready to attach'
+                : 'Choose an area or window to record'}
+          </Typography>
+          {recordedScreen ? (
+            <video
+              ref={recordedScreenRef}
+              controls
+              src={recordedScreen.dataUrl}
+              style={{
+                width: '100%',
+                minHeight: '280px',
+                borderRadius: '14px',
+                backgroundColor: '#000',
+              }}
+            />
+          ) : (
+            <video
+              ref={setScreenPreviewNode}
+              autoPlay
+              muted
+              playsInline
+              style={{
+                width: '100%',
+                minHeight: '280px',
+                borderRadius: '14px',
+                backgroundColor: '#000',
+                objectFit: 'contain',
+              }}
+            />
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 2, pb: 2, bgcolor: '#111' }}>
+          <Button onClick={closeScreenRecorder} sx={{ color: 'rgba(255,255,255,0.75)' }}>
+            Cancel
+          </Button>
+          {recordedScreen && (
+            <Button
+              onClick={() => {
+                void retakeScreenRecording();
+              }}
+              startIcon={<Replay />}
+              sx={{ color: 'rgba(255,255,255,0.85)' }}
+            >
+              Retake
+            </Button>
+          )}
+          <Button
+            onClick={() => {
+              if (isScreenRecording) {
+                void stopScreenRecording();
+              } else if (recordedScreen) {
+                handleAttachRecordedScreen();
+              } else {
+                void handleScreenShareClick();
+              }
+            }}
+            variant="contained"
+            color="success"
+          >
+            {isScreenRecording ? 'Stop' : recordedScreen ? 'Attach recording' : 'Start'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </>
   );
 }
