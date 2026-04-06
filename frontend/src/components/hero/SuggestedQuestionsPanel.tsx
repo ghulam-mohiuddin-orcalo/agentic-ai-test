@@ -2,18 +2,20 @@
 
 import { Box, Typography, Chip } from '@mui/material';
 import { useRouter } from 'next/navigation';
+import { useTranslation } from 'react-i18next';
 
-const SUGGESTED_QUESTIONS = [
-  'What is the best AI model for coding?',
-  'Compare GPT-5 vs Claude Opus 4.6',
-  'Which free models support vision?',
-  'Best model for document analysis?',
-  'Cheapest model with 1M+ context?',
-  'Which model is best for agents?',
+const SUGGESTION_KEYS = [
+  'home.suggestedQuestions.q1',
+  'home.suggestedQuestions.q2',
+  'home.suggestedQuestions.q3',
+  'home.suggestedQuestions.q4',
+  'home.suggestedQuestions.q5',
+  'home.suggestedQuestions.q6',
 ];
 
 export default function SuggestedQuestionsPanel() {
   const router = useRouter();
+  const { t } = useTranslation();
 
   return (
     <Box sx={{ mt: 3 }}>
@@ -27,7 +29,7 @@ export default function SuggestedQuestionsPanel() {
           textAlign: 'center',
         }}
       >
-        Suggested questions
+        {t('home.suggestedQuestions.title')}
       </Typography>
       <Box
         sx={{
@@ -37,11 +39,11 @@ export default function SuggestedQuestionsPanel() {
           justifyContent: 'center',
         }}
       >
-        {SUGGESTED_QUESTIONS.map((question) => (
+        {SUGGESTION_KEYS.map((key) => (
           <Chip
-            key={question}
-            label={question}
-            onClick={() => router.push('/chat?q=' + encodeURIComponent(question))}
+            key={key}
+            label={t(key)}
+            onClick={() => router.push('/chat?q=' + encodeURIComponent(t(key)))}
             variant="outlined"
             sx={{
               fontSize: '0.75rem',

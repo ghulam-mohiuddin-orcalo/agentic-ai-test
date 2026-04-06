@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { Box, Typography, Chip } from '@mui/material';
 import { Star } from '@mui/icons-material';
 import { ModelData } from '@/components/models/ModelCard';
+import { useTranslation } from 'react-i18next';
 
 const TAG_COLORS: Record<string, { bg: string; color: string }> = {
   Language: { bg: '#EBF0FC', color: '#1E4DA8' },
@@ -20,9 +21,9 @@ const TAG_COLORS: Record<string, { bg: string; color: string }> = {
 };
 
 const BADGE_CONFIG = {
-  hot: { label: 'Hot', bg: 'linear-gradient(135deg, #FF6B6B, #FF4757)', color: '#fff' },
-  new: { label: 'New', bg: '#EBF0FC', color: '#1E4DA8' },
-  open: { label: 'Open', bg: '#E2F5EF', color: '#0A5E49' },
+  hot: { labelKey: 'landing.badges.hot', bg: 'linear-gradient(135deg, #FF6B6B, #FF4757)', color: '#fff' },
+  new: { labelKey: 'landing.badges.new', bg: '#EBF0FC', color: '#1E4DA8' },
+  open: { labelKey: 'landing.badges.open', bg: '#E2F5EF', color: '#0A5E49' },
 };
 
 interface Props {
@@ -32,6 +33,7 @@ interface Props {
 
 export default function MarketplaceModelCard({ model, onClick }: Props) {
   const router = useRouter();
+  const { t } = useTranslation();
 
   return (
     <Box
@@ -104,7 +106,7 @@ export default function MarketplaceModelCard({ model, onClick }: Props) {
               flexShrink: 0,
             }}
           >
-            {BADGE_CONFIG[model.badge].label}
+            {t(BADGE_CONFIG[model.badge].labelKey)}
           </Box>
         )}
       </Box>
@@ -185,7 +187,7 @@ export default function MarketplaceModelCard({ model, onClick }: Props) {
               '&:hover': { bgcolor: 'var(--accent2)' },
             }}
           >
-            Try it →
+            {t('marketplace.tryIt')}
           </Box>
         </Box>
       </Box>

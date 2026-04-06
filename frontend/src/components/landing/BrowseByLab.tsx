@@ -3,6 +3,7 @@
 import { Box, Typography, Button } from '@mui/material';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import { useRouter } from 'next/navigation';
+import { useTranslation } from 'react-i18next';
 import { AI_LABS } from '@/lib/constants';
 
 const LAB_DESCRIPTIONS: Record<string, string> = {
@@ -31,11 +32,13 @@ const LAB_DESCRIPTIONS: Record<string, string> = {
 
 export default function BrowseByLab() {
   const router = useRouter();
+  const { t } = useTranslation();
+
   return (
     <Box sx={{ py: 6 }}>
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
         <Typography variant="h2" sx={{ fontSize: '1.5rem' }}>
-          Browse by AI Lab
+          {t('landing.browseLab.title')}
         </Typography>
         <Button
           endIcon={<ArrowForwardIcon />}
@@ -47,7 +50,7 @@ export default function BrowseByLab() {
           }}
           href="/marketplace"
         >
-          All labs
+          {t('landing.browseLab.allLabs')}
         </Button>
       </Box>
 
@@ -172,7 +175,7 @@ export default function BrowseByLab() {
               lineHeight: 1.3,
             }}
           >
-            All 28 Labs
+            {t('landing.browseLab.allLabsCount', { count: 28 })}
           </Typography>
         </Box>
       </Box>

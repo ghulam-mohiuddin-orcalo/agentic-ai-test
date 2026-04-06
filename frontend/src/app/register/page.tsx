@@ -18,10 +18,12 @@ import { Visibility, VisibilityOff } from '@mui/icons-material';
 import { useRegisterMutation } from '@/store/api/authApi';
 import { useAppDispatch } from '@/store/hooks';
 import { setCredentials } from '@/store/slices/authSlice';
+import { useTranslation } from 'react-i18next';
 
 export default function RegisterPage() {
   const router = useRouter();
   const dispatch = useAppDispatch();
+  const { t } = useTranslation();
   const [register, { isLoading }] = useRegisterMutation();
 
   const [formData, setFormData] = useState({
@@ -39,27 +41,27 @@ export default function RegisterPage() {
     const errors: Record<string, string> = {};
 
     if (!formData.name.trim()) {
-      errors.name = 'Name is required';
+      errors.name = t('auth.register.nameRequired');
     }
 
     if (!formData.email.trim()) {
-      errors.email = 'Email is required';
+      errors.email = t('auth.register.emailRequired');
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      errors.email = 'Invalid email format';
+      errors.email = t('auth.register.emailInvalid');
     }
 
     if (!formData.password) {
-      errors.password = 'Password is required';
+      errors.password = t('auth.register.passwordRequired');
     } else if (formData.password.length < 8) {
-      errors.password = 'Password must be at least 8 characters';
+      errors.password = t('auth.register.passwordMinLength');
     } else if (!/[A-Z]/.test(formData.password)) {
-      errors.password = 'Password must contain at least one uppercase letter';
+      errors.password = t('auth.register.passwordUppercase');
     } else if (!/[0-9]/.test(formData.password)) {
-      errors.password = 'Password must contain at least one number';
+      errors.password = t('auth.register.passwordNumber');
     }
 
     if (formData.password !== formData.confirmPassword) {
-      errors.confirmPassword = 'Passwords do not match';
+      errors.confirmPassword = t('auth.register.passwordMismatch');
     }
 
     setFieldErrors(errors);
@@ -84,11 +86,12 @@ export default function RegisterPage() {
       dispatch(setCredentials({
         user: result.user,
         token: result.accessToken,
+        refreshToken: result.refreshToken,
       }));
 
       router.push('/chat');
     } catch (err: any) {
-      setError(err?.data?.message || 'Registration failed. Please try again.');
+      setError(err?.data?.message || t('auth.register.error'));
     }
   };
 
@@ -100,9 +103,9 @@ export default function RegisterPage() {
   };
 
   const passwordRequirements = [
-    { met: formData.password.length >= 8, text: 'At least 8 characters' },
-    { met: /[A-Z]/.test(formData.password), text: 'One uppercase letter' },
-    { met: /[0-9]/.test(formData.password), text: 'One number' },
+    { met: formData.password.length >= 8, text: t('auth.register.reqLength') },
+    { met: /[A-Z]/.test(formData.password), text: t('auth.register.reqUppercase') },
+    { met: /[0-9]/.test(formData.password), text: t('auth.register.reqNumber') },
   ];
 
   return (
@@ -137,7 +140,7 @@ export default function RegisterPage() {
             Nexus<span style={{ color: '#C8622A' }}>AI</span>
           </Typography>
           <Typography sx={{ fontSize: '0.9375rem', color: 'var(--text2)' }}>
-            Create your account
+            {t('auth.register.title')}
           </Typography>
         </Box>
 
@@ -162,11 +165,11 @@ export default function RegisterPage() {
           {/* Name */}
           <Box sx={{ mb: 2.5 }}>
             <Typography sx={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text)', mb: 1 }}>
-              Full Name
+              {t('auth.register.name')}
             </Typography>
             <TextField
               fullWidth
-              placeholder="John Doe"
+              placeholder={t('auth.register.namePlaceholder')}
               value={formData.name}
               onChange={handleChange('name')}
               error={!!fieldErrors.name}
@@ -186,12 +189,12 @@ export default function RegisterPage() {
           {/* Email */}
           <Box sx={{ mb: 2.5 }}>
             <Typography sx={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text)', mb: 1 }}>
-              Email Address
+              {t('auth.register.email')}
             </Typography>
             <TextField
               fullWidth
               type="email"
-              placeholder="you@example.com"
+              placeholder={t('auth.register.emailPlaceholder')}
               value={formData.email}
               onChange={handleChange('email')}
               error={!!fieldErrors.email}
@@ -211,12 +214,12 @@ export default function RegisterPage() {
           {/* Password */}
           <Box sx={{ mb: 2.5 }}>
             <Typography sx={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text)', mb: 1 }}>
-              Password
+              {t('auth.register.password')}
             </Typography>
             <TextField
               fullWidth
               type={showPassword ? 'text' : 'password'}
-              placeholder="••••••••"
+              placeholder={t('auth.register.passwordPlaceholder')}
               value={formData.password}
               onChange={handleChange('password')}
               error={!!fieldErrors.password}
@@ -267,12 +270,12 @@ export default function RegisterPage() {
           {/* Confirm Password */}
           <Box sx={{ mb: 3 }}>
             <Typography sx={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text)', mb: 1 }}>
-              Confirm Password
+              {t('auth.register.confirmPassword')}
             </Typography>
             <TextField
               fullWidth
               type={showConfirmPassword ? 'text' : 'password'}
-              placeholder="••••••••"
+              placeholder={t('auth.register.passwordPlaceholder')}
               value={formData.confirmPassword}
               onChange={handleChange('confirmPassword')}
               error={!!fieldErrors.confirmPassword}
@@ -320,12 +323,12 @@ export default function RegisterPage() {
               mb: 2,
             }}
           >
-            {isLoading ? 'Creating account...' : 'Create account'}
+            {isLoading ? t('auth.register.submitting') : t('auth.register.submit')}
           </Button>
 
           {/* Login Link */}
           <Typography sx={{ textAlign: 'center', fontSize: '0.875rem', color: 'var(--text2)' }}>
-            Already have an account?{' '}
+            {t('auth.register.hasAccount')}{' '}
             <Link
               href="/login"
               style={{
@@ -334,7 +337,7 @@ export default function RegisterPage() {
                 fontWeight: 600,
               }}
             >
-              Sign in
+              {t('auth.register.signIn')}
             </Link>
           </Typography>
         </Box>

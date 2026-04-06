@@ -3,20 +3,23 @@
 import { Box, Typography, Button } from '@mui/material';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import StarIcon from '@mui/icons-material/Star';
+import { useTranslation } from 'react-i18next';
 import { TRENDING_MODELS } from '@/lib/constants';
 
 export default function TrendingModels() {
+  const { t } = useTranslation();
+
   return (
     <Box sx={{ py: 6 }}>
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
         <Typography variant="h2" sx={{ fontSize: '1.5rem' }}>
-          🔥 Trending This Week
+          {'\uD83D\uDD25'} {t('landing.trending.title')}
         </Typography>
         <Button
           endIcon={<ArrowForwardIcon />}
           sx={{ color: 'primary.main', fontWeight: 500, fontSize: '0.875rem', '&:hover': { bgcolor: 'primary.light' } }}
         >
-          See all
+          {t('landing.trending.seeAll')}
         </Button>
       </Box>
 

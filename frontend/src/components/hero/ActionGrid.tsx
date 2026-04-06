@@ -2,27 +2,28 @@
 
 import { Box, Paper, Typography } from '@mui/material';
 import { useRouter } from 'next/navigation';
+import { useTranslation } from 'react-i18next';
 
 interface Action {
   emoji: string;
-  label: string;
+  labelKey: string;
 }
 
 const ACTIONS: Action[] = [
-  { emoji: '🎨', label: 'Create image' },
-  { emoji: '🎵', label: 'Generate Audio' },
-  { emoji: '📝', label: 'Summarize text' },
-  { emoji: '💻', label: 'Write code' },
-  { emoji: '📊', label: 'Analyze data' },
-  { emoji: '🌐', label: 'Translate' },
-  { emoji: '🔍', label: 'Research topic' },
-  { emoji: '✈️', label: 'Plan trip' },
-  { emoji: '📧', label: 'Draft email' },
-  { emoji: '🐛', label: 'Debug code' },
-  { emoji: '🖌️', label: 'Design UI' },
-  { emoji: '📖', label: 'Write story' },
-  { emoji: '📚', label: 'Learn concept' },
-  { emoji: '⚖️', label: 'Compare options' },
+  { emoji: '\uD83C\uDFA8', labelKey: 'home.actionGrid.createImage' },
+  { emoji: '\uD83C\uDFB5', labelKey: 'home.actionGrid.generateAudio' },
+  { emoji: '\uD83D\uDCDD', labelKey: 'home.actionGrid.summarizeText' },
+  { emoji: '\uD83D\uDCBB', labelKey: 'home.actionGrid.writeCode' },
+  { emoji: '\uD83D\uDCCA', labelKey: 'home.actionGrid.analyzeData' },
+  { emoji: '\uD83C\uDF10', labelKey: 'home.actionGrid.translate' },
+  { emoji: '\uD83D\uDD0D', labelKey: 'home.actionGrid.researchTopic' },
+  { emoji: '\u2708\uFE0F', labelKey: 'home.actionGrid.planTrip' },
+  { emoji: '\uD83D\uDCE7', labelKey: 'home.actionGrid.draftEmail' },
+  { emoji: '\uD83D\uDC1B', labelKey: 'home.actionGrid.debugCode' },
+  { emoji: '\uD83D\uDD8C\uFE0F', labelKey: 'home.actionGrid.designUI' },
+  { emoji: '\uD83D\uDCD6', labelKey: 'home.actionGrid.writeStory' },
+  { emoji: '\uD83D\uDCDA', labelKey: 'home.actionGrid.learnConcept' },
+  { emoji: '\u2696\uFE0F', labelKey: 'home.actionGrid.compareOptions' },
 ];
 
 interface ActionGridProps {
@@ -31,6 +32,8 @@ interface ActionGridProps {
 
 export default function ActionGrid({ onActionClick }: ActionGridProps) {
   const router = useRouter();
+  const { t } = useTranslation();
+
   return (
     <Box>
       <Typography
@@ -42,7 +45,7 @@ export default function ActionGrid({ onActionClick }: ActionGridProps) {
           color: 'text.secondary',
         }}
       >
-        Or try one of these
+        {t('home.actionGrid.title')}
       </Typography>
 
       <Box
@@ -60,8 +63,9 @@ export default function ActionGrid({ onActionClick }: ActionGridProps) {
           <Paper
             key={index}
             onClick={() => {
-              if (onActionClick) onActionClick(action.label);
-              router.push('/chat?q=' + encodeURIComponent(action.label));
+              const label = t(action.labelKey);
+              if (onActionClick) onActionClick(label);
+              router.push('/chat?q=' + encodeURIComponent(label));
             }}
             sx={{
               p: 2,
@@ -94,7 +98,7 @@ export default function ActionGrid({ onActionClick }: ActionGridProps) {
                 fontSize: '0.75rem',
               }}
             >
-              {action.label}
+              {t(action.labelKey)}
             </Typography>
           </Paper>
         ))}

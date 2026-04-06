@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react';
 import { Box, Typography, Chip, TextField, InputAdornment, IconButton, LinearProgress } from '@mui/material';
 import { Search, Close, Share, BookmarkBorder, ArrowBack } from '@mui/icons-material';
+import { useTranslation } from 'react-i18next';
 
 interface ResearchItem {
   id: string;
@@ -320,6 +321,7 @@ export default function DiscoverPage() {
   const [search, setSearch] = useState('');
   const [activeTag, setActiveTag] = useState('');
   const [selectedArticle, setSelectedArticle] = useState<ResearchItem | null>(null);
+  const { t } = useTranslation();
 
   const filtered = useMemo(() => {
     let items = FEED;
@@ -377,16 +379,16 @@ export default function DiscoverPage() {
                   mb: 0.375,
                 }}
               >
-                AI Research Feed
+                {t('discover.title')}
               </Typography>
               <Typography sx={{ fontSize: '0.9rem', color: 'var(--text2)' }}>
-                Latest papers and breakthroughs from leading AI labs
+                {t('discover.subtitle')}
               </Typography>
             </Box>
 
             <TextField
               size="small"
-              placeholder="Search papers..."
+              placeholder={t('discover.searchPlaceholder')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               InputProps={{
@@ -414,7 +416,7 @@ export default function DiscoverPage() {
           {/* Tag filter chips */}
           <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap' }}>
             <Chip
-              label="All"
+              label={t('discover.filterAll')}
               size="small"
               onClick={() => setActiveTag('')}
               sx={{
@@ -480,10 +482,10 @@ export default function DiscoverPage() {
           <Box sx={{ textAlign: 'center', py: 8 }}>
             <Typography sx={{ fontSize: '2rem', mb: 1.5 }}>&#128269;</Typography>
             <Typography sx={{ fontWeight: 600, color: 'var(--text)', mb: 0.5 }}>
-              No results found
+              {t('discover.noResults')}
             </Typography>
             <Typography sx={{ fontSize: '0.875rem', color: 'var(--text2)' }}>
-              Try a different keyword or clear the filters
+              {t('discover.noResultsHint')}
             </Typography>
           </Box>
         ) : (
@@ -511,6 +513,8 @@ interface ArticleDetailProps {
 }
 
 function ArticleDetail({ article, relatedArticles, onBack, onSelectRelated }: ArticleDetailProps) {
+  const { t } = useTranslation();
+
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
       {/* Back button */}
@@ -530,7 +534,7 @@ function ArticleDetail({ article, relatedArticles, onBack, onSelectRelated }: Ar
         }}
       >
         <ArrowBack sx={{ fontSize: 18 }} />
-        Back to feed
+        {t('discover.backToFeed')}
       </Box>
 
       {/* Article header */}
@@ -625,7 +629,7 @@ function ArticleDetail({ article, relatedArticles, onBack, onSelectRelated }: Ar
           >
             <Share sx={{ fontSize: 16 }} />
             <Typography component="span" sx={{ fontSize: '0.8rem', fontWeight: 500 }}>
-              Share
+              {t('discover.share')}
             </Typography>
           </IconButton>
           <IconButton
@@ -642,7 +646,7 @@ function ArticleDetail({ article, relatedArticles, onBack, onSelectRelated }: Ar
           >
             <BookmarkBorder sx={{ fontSize: 16 }} />
             <Typography component="span" sx={{ fontSize: '0.8rem', fontWeight: 500 }}>
-              Bookmark
+              {t('discover.bookmark')}
             </Typography>
           </IconButton>
         </Box>
@@ -667,7 +671,7 @@ function ArticleDetail({ article, relatedArticles, onBack, onSelectRelated }: Ar
               mb: 2,
             }}
           >
-            Benchmark Performance
+            {t('discover.benchmarkPerformance')}
           </Typography>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             {article.benchmarks.map((bench) => (
@@ -718,7 +722,7 @@ function ArticleDetail({ article, relatedArticles, onBack, onSelectRelated }: Ar
               mb: 2,
             }}
           >
-            Related Articles
+            {t('discover.relatedArticles')}
           </Typography>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
             {relatedArticles.map((related) => (

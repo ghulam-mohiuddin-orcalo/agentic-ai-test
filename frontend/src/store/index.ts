@@ -9,6 +9,7 @@ import onboardingReducer from './slices/onboardingSlice';
 // Import API files to trigger injectEndpoints
 import './api/authApi';
 import './api/chatApi';
+import './api/modelsApi';
 
 export const store = configureStore({
   reducer: {

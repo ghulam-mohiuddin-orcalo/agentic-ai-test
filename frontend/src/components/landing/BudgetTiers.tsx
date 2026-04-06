@@ -2,21 +2,24 @@
 
 import { Box, Typography, Button } from '@mui/material';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import { useTranslation } from 'react-i18next';
 import { BUDGET_TIERS } from '@/lib/constants';
 
 export default function BudgetTiers() {
+  const { t } = useTranslation();
+
   return (
     <Box>
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
         <Typography variant="h2" sx={{ fontSize: '1.5rem' }}>
-          Find Models by Budget
+          {t('landing.budget.title')}
         </Typography>
         <Button
           endIcon={<ArrowForwardIcon />}
           sx={{ color: 'primary.main', fontWeight: 500, fontSize: '0.875rem', '&:hover': { bgcolor: 'primary.light' } }}
           href="/marketplace"
         >
-          Explore pricing
+          {t('landing.budget.explorePricing')}
         </Button>
       </Box>
 

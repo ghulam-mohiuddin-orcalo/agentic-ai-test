@@ -25,6 +25,7 @@ import MarketplaceModelCard from '@/components/marketplace/MarketplaceModelCard'
 import { MARKETPLACE_MODELS } from '@/lib/marketplaceData';
 import { AI_LABS } from '@/lib/constants';
 import type { ModelData } from '@/components/models/ModelCard';
+import { useTranslation } from 'react-i18next';
 
 const LAB_DESCRIPTIONS: Record<string, string> = {
   openai: 'Pioneering AI research lab behind GPT-5, o3, and DALL-E. Known for state-of-the-art language models.',
@@ -100,6 +101,7 @@ export default function MarketplacePage() {
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
   const [gridView, setGridView] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const { t } = useTranslation();
 
   const filtered = useMemo(() => {
     let result = MARKETPLACE_MODELS;
@@ -173,10 +175,10 @@ export default function MarketplacePage() {
                 mb: 0.375,
               }}
             >
-              Model Marketplace
+              {t('marketplace.title')}
             </Typography>
             <Typography sx={{ fontSize: '0.875rem', color: 'var(--text2)' }}>
-              {MARKETPLACE_MODELS.length}+ models from leading AI labs
+              {t('marketplace.modelCount', { count: MARKETPLACE_MODELS.length })}
             </Typography>
           </Box>
 
@@ -185,7 +187,7 @@ export default function MarketplacePage() {
             <TextField
               fullWidth
               size="small"
-              placeholder="Search models, capabilities, labs..."
+              placeholder={t('marketplace.searchPlaceholder')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               InputProps={{
@@ -221,7 +223,7 @@ export default function MarketplacePage() {
           }}
         >
           <Chip
-            label="All Labs"
+            label={t('marketplace.allLabs')}
             size="small"
             onClick={() => setSelectedLab('')}
             sx={{
@@ -317,11 +319,11 @@ export default function MarketplacePage() {
                     border: '1px solid var(--border)',
                   }}
                 >
-                  {labModelCount} {labModelCount === 1 ? 'model' : 'models'}
+                  {t('marketplace.modelCount_' + (labModelCount === 1 ? 'singular' : 'plural'), { count: labModelCount })}
                 </Typography>
               </Box>
               <Typography sx={{ fontSize: '0.8125rem', color: 'var(--text2)', lineHeight: 1.4 }}>
-                {LAB_DESCRIPTIONS[selectedLab] ?? `Explore models from ${lab.name}.`}
+                {LAB_DESCRIPTIONS[selectedLab] ?? t('marketplace.exploreLab', { lab: lab.name })}
               </Typography>
             </Box>
           </Box>
@@ -353,7 +355,7 @@ export default function MarketplacePage() {
           >
             {/* Left: toggle sidebar + capability chips */}
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-              <Tooltip title={sidebarOpen ? 'Hide filters' : 'Show filters'}>
+              <Tooltip title={sidebarOpen ? t('marketplace.hideFilters') : t('marketplace.showFilters')}>
                 <Button
                   size="small"
                   startIcon={<TuneRounded sx={{ fontSize: 16 }} />}
@@ -370,7 +372,7 @@ export default function MarketplacePage() {
                     '&:hover': { bgcolor: 'var(--bg2)' },
                   }}
                 >
-                  Filters{activeFiltersCount > 0 ? ` (${activeFiltersCount})` : ''}
+                  {t('marketplace.filters')}{activeFiltersCount > 0 ? ` (${activeFiltersCount})` : ''}
                 </Button>
               </Tooltip>
 
@@ -398,7 +400,7 @@ export default function MarketplacePage() {
             {/* Right: sort + view toggle + count */}
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
               <Typography sx={{ fontSize: '0.8125rem', color: 'var(--text3)', whiteSpace: 'nowrap' }}>
-                {filtered.length} models
+                {t('marketplace.resultCount', { count: filtered.length })}
               </Typography>
               <FormControl size="small">
                 <Select
@@ -464,10 +466,10 @@ export default function MarketplacePage() {
               <Box sx={{ textAlign: 'center', py: 8 }}>
                 <Typography sx={{ fontSize: '2.5rem', mb: 1.5 }}>🔍</Typography>
                 <Typography sx={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text)', mb: 0.75 }}>
-                  No models match your filters
+                  {t('marketplace.noResults')}
                 </Typography>
                 <Typography sx={{ fontSize: '0.875rem', color: 'var(--text2)', mb: 2 }}>
-                  Try adjusting your search or filters
+                  {t('marketplace.noResultsHint')}
                 </Typography>
                 <Button
                   variant="outlined"
@@ -475,7 +477,7 @@ export default function MarketplacePage() {
                   onClick={() => { setSearch(''); setSelectedLab(''); setCapability(''); setFilters(DEFAULT_FILTERS); }}
                   sx={{ textTransform: 'none', borderRadius: '8px', borderColor: 'var(--border)', color: 'var(--text2)' }}
                 >
-                  Clear all filters
+                  {t('common.clearFilters')}
                 </Button>
               </Box>
             ) : (

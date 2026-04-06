@@ -2,16 +2,18 @@
 
 import { Box, Typography, Paper } from '@mui/material';
 import { useRouter } from 'next/navigation';
+import { useTranslation } from 'react-i18next';
 
 const AGENTS = [
-  { emoji: '💻', name: 'Code Assistant', desc: 'Write, debug, and review code' },
-  { emoji: '📝', name: 'Content Writer', desc: 'Articles, blogs, and copy' },
-  { emoji: '📊', name: 'Data Analyst', desc: 'Analyze and visualize data' },
-  { emoji: '🔬', name: 'Research Agent', desc: 'Deep research and summaries' },
+  { emoji: '\uD83D\uDCBB', nameKey: 'home.agentPanel.codeAssistant', descKey: 'home.agentPanel.codeAssistantDesc' },
+  { emoji: '\uD83D\uDCDD', nameKey: 'home.agentPanel.contentWriter', descKey: 'home.agentPanel.contentWriterDesc' },
+  { emoji: '\uD83D\uDCCA', nameKey: 'home.agentPanel.dataAnalyst', descKey: 'home.agentPanel.dataAnalystDesc' },
+  { emoji: '\uD83D\uDD2C', nameKey: 'home.agentPanel.researchAgent', descKey: 'home.agentPanel.researchAgentDesc' },
 ];
 
 export default function AgentPanel() {
   const router = useRouter();
+  const { t } = useTranslation();
 
   return (
     <Box sx={{ mt: 3 }}>
@@ -25,7 +27,7 @@ export default function AgentPanel() {
           textAlign: 'center',
         }}
       >
-        Popular agents
+        {t('home.agentPanel.title')}
       </Typography>
       <Box
         sx={{
@@ -36,8 +38,8 @@ export default function AgentPanel() {
       >
         {AGENTS.map((agent) => (
           <Paper
-            key={agent.name}
-            onClick={() => router.push('/agents?template=' + encodeURIComponent(agent.name))}
+            key={agent.nameKey}
+            onClick={() => router.push('/agents?template=' + encodeURIComponent(t(agent.nameKey)))}
             sx={{
               p: 2,
               textAlign: 'center',
@@ -57,13 +59,13 @@ export default function AgentPanel() {
               variant="caption"
               sx={{ display: 'block', fontWeight: 600, fontSize: '0.75rem', color: 'text.primary' }}
             >
-              {agent.name}
+              {t(agent.nameKey)}
             </Typography>
             <Typography
               variant="caption"
               sx={{ display: 'block', fontSize: '0.625rem', color: 'text.secondary', mt: 0.25 }}
             >
-              {agent.desc}
+              {t(agent.descKey)}
             </Typography>
           </Paper>
         ))}

@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { Box, Typography, LinearProgress } from '@mui/material';
 import { useDispatch, useSelector } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 import {
   startOnboarding,
   answerQuestion,
@@ -18,6 +19,7 @@ const QUESTION_KEYS = ['goal', 'experience', 'content_type', 'timeline', 'budget
 export default function OnboardingFlow() {
   const dispatch = useDispatch();
   const { currentStep, isComplete, isActive } = useSelector((state: RootState) => state.onboarding);
+  const { t } = useTranslation();
 
   useEffect(() => {
     if (!isActive) {
@@ -53,10 +55,10 @@ export default function OnboardingFlow() {
             animation: 'fadeIn 0.5s ease',
           }}
         >
-          🎉 Perfect! Let's find your ideal model
+          {'\uD83C\uDF89'} {t('home.onboarding.perfect')}
         </Typography>
         <Typography variant="body1" color="text.secondary">
-          Building your personalized recommendations...
+          {t('home.onboarding.building')}
         </Typography>
         <Box sx={{ mt: 3, maxWidth: 400, mx: 'auto' }}>
           <LinearProgress
@@ -90,10 +92,10 @@ export default function OnboardingFlow() {
           }}
         >
           <Typography variant="body2" color="text.secondary">
-            Question {currentStep + 1} of 9
+            {t('home.onboarding.stepOf', { current: currentStep + 1, total: 9 })}
           </Typography>
           <Typography variant="body2" color="primary.main" fontWeight={600}>
-            {Math.round(progress)}%
+            {t('home.onboarding.progress', { percent: Math.round(progress) })}
           </Typography>
         </Box>
         <LinearProgress

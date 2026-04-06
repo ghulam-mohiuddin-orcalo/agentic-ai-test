@@ -21,61 +21,31 @@ import {
   Avatar,
   Divider,
 } from '@mui/material';
-import { Menu as MenuIcon, Close, Language as LanguageIcon, KeyboardArrowDown, Person, Settings, Logout } from '@mui/icons-material';
+import { Menu as MenuIcon, Close, KeyboardArrowDown, Person, Settings, Logout } from '@mui/icons-material';
 import Link from 'next/link';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/hooks/useAuth';
 import { useAppDispatch } from '@/store/hooks';
 import { logout } from '@/store/slices/authSlice';
+import LanguageSwitcher from './LanguageSwitcher';
 
-const NAV_LINKS = [
-  { label: 'Chat Hub', href: '/chat' },
-  { label: 'Marketplace', href: '/marketplace' },
-  { label: 'Discover New', href: '/discover' },
-  { label: 'Agents', href: '/agents' },
-];
-
-const LANGUAGES = [
-  { code: 'EN', label: 'English', flag: '\u{1F1FA}\u{1F1F8}' },
-  { code: 'AR', label: '\u0627\u0644\u0639\u0631\u0628\u064A\u0629', flag: '\u{1F1F8}\u{1F1E6}' },
-  { code: 'FR', label: 'Fran\u00E7ais', flag: '\u{1F1EB}\u{1F1F7}' },
-  { code: 'DE', label: 'Deutsch', flag: '\u{1F1E9}\u{1F1EA}' },
-  { code: 'ES', label: 'Espa\u00F1ol', flag: '\u{1F1EA}\u{1F1F8}' },
-  { code: 'PT', label: 'Portugu\u00EAs', flag: '\u{1F1E7}\u{1F1F7}' },
-  { code: 'ZH', label: '\u4E2D\u6587', flag: '\u{1F1E8}\u{1F1F3}' },
-  { code: 'JA', label: '\u65E5\u672C\u8A9E', flag: '\u{1F1EF}\u{1F1F5}' },
-  { code: 'KO', label: '\uD55C\uAD6D\uC5B4', flag: '\u{1F1F0}\u{1F1F7}' },
-  { code: 'HI', label: '\u0939\u093F\u0928\u094D\u0926\u0940', flag: '\u{1F1EE}\u{1F1F3}' },
-  { code: 'UR', label: '\u0627\u0631\u062F\u0648', flag: '\u{1F1F5}\u{1F1F0}' },
-  { code: 'TR', label: 'T\u00FCrk\u00E7e', flag: '\u{1F1F9}\u{1F1F7}' },
-  { code: 'RU', label: '\u0420\u0443\u0441\u0441\u043A\u0438\u0439', flag: '\u{1F1F7}\u{1F1FA}' },
-  { code: 'IT', label: 'Italiano', flag: '\u{1F1EE}\u{1F1F9}' },
-  { code: 'NL', label: 'Nederlands', flag: '\u{1F1F3}\u{1F1F1}' },
+const NAV_LINK_KEYS = [
+  { labelKey: 'nav.chatHub', href: '/chat' },
+  { labelKey: 'nav.marketplace', href: '/marketplace' },
+  { labelKey: 'nav.discover', href: '/discover' },
+  { labelKey: 'nav.agents', href: '/agents' },
 ];
 
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [langAnchor, setLangAnchor] = useState<null | HTMLElement>(null);
   const [userAnchor, setUserAnchor] = useState<null | HTMLElement>(null);
-  const [selectedLang, setSelectedLang] = useState('EN');
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const pathname = usePathname();
   const router = useRouter();
   const dispatch = useAppDispatch();
   const { isAuthenticated, user } = useAuth();
-
-  const handleLangClick = (event: React.MouseEvent<HTMLElement>) => {
-    setLangAnchor(event.currentTarget);
-  };
-
-  const handleLangClose = () => {
-    setLangAnchor(null);
-  };
-
-  const handleLangSelect = (code: string) => {
-    setSelectedLang(code);
-    handleLangClose();
-  };
+  const { t } = useTranslation();
 
   const handleUserClick = (event: React.MouseEvent<HTMLElement>) => {
     setUserAnchor(event.currentTarget);
@@ -135,7 +105,7 @@ export default function Navbar() {
           {/* Desktop Nav - Center */}
           {!isMobile && (
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, position: 'absolute', left: '50%', transform: 'translateX(-50%)' }}>
-              {NAV_LINKS.map((link) => {
+              {NAV_LINK_KEYS.map((link) => {
                 const isActive = pathname === link.href || pathname.startsWith(link.href + '/');
                 return (
                   <Button
@@ -167,7 +137,7 @@ export default function Navbar() {
                       },
                     }}
                   >
-                    {link.label}
+                    {t(link.labelKey)}
                   </Button>
                 );
               })}
@@ -177,70 +147,7 @@ export default function Navbar() {
           {/* Right side - Language + Auth Buttons */}
           {!isMobile && (
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Button
-                onClick={handleLangClick}
-                startIcon={<LanguageIcon />}
-                endIcon={<KeyboardArrowDown />}
-                sx={{
-                  color: 'text.secondary',
-                  fontWeight: 500,
-                  fontSize: '0.9375rem',
-                  textTransform: 'none',
-                  px: 1.5,
-                  '&:hover': {
-                    bgcolor: 'rgba(0,0,0,0.04)',
-                  },
-                }}
-              >
-                {selectedLang}
-              </Button>
-              <Menu
-                anchorEl={langAnchor}
-                open={Boolean(langAnchor)}
-                onClose={handleLangClose}
-                anchorOrigin={{
-                  vertical: 'bottom',
-                  horizontal: 'right',
-                }}
-                transformOrigin={{
-                  vertical: 'top',
-                  horizontal: 'right',
-                }}
-                PaperProps={{
-                  sx: {
-                    mt: 1,
-                    minWidth: 150,
-                    borderRadius: 2,
-                    boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
-                  },
-                }}
-              >
-                <Box sx={{ px: 2, py: 1, borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
-                  <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    App Language
-                  </Typography>
-                </Box>
-                {LANGUAGES.map((lang) => (
-                  <MenuItem
-                    key={lang.code}
-                    onClick={() => handleLangSelect(lang.code)}
-                    selected={selectedLang === lang.code}
-                    sx={{
-                      fontSize: '0.9375rem',
-                      py: 1,
-                      '&.Mui-selected': {
-                        bgcolor: 'rgba(200, 98, 42, 0.08)',
-                        '&:hover': {
-                          bgcolor: 'rgba(200, 98, 42, 0.12)',
-                        },
-                      },
-                    }}
-                  >
-                    <Box component="span" sx={{ mr: 1 }}>{lang.flag}</Box>
-                    {lang.label}
-                  </MenuItem>
-                ))}
-              </Menu>
+              <LanguageSwitcher />
 
               {isAuthenticated ? (
                 <>
@@ -309,7 +216,7 @@ export default function Navbar() {
                       sx={{ fontSize: '0.9375rem', py: 1.5 }}
                     >
                       <Person sx={{ mr: 1.5, fontSize: 20 }} />
-                      Profile
+                      {t('nav.profile')}
                     </MenuItem>
                     <MenuItem
                       component={Link}
@@ -318,7 +225,7 @@ export default function Navbar() {
                       sx={{ fontSize: '0.9375rem', py: 1.5 }}
                     >
                       <Settings sx={{ mr: 1.5, fontSize: 20 }} />
-                      Settings
+                      {t('nav.settings')}
                     </MenuItem>
                     <Divider />
                     <MenuItem
@@ -333,7 +240,7 @@ export default function Navbar() {
                       }}
                     >
                       <Logout sx={{ mr: 1.5, fontSize: 20 }} />
-                      Logout
+                      {t('nav.logout')}
                     </MenuItem>
                   </Menu>
                 </>
@@ -353,7 +260,7 @@ export default function Navbar() {
                       },
                     }}
                   >
-                    Sign in
+                    {t('nav.signIn')}
                   </Button>
                   <Button
                     component={Link}
@@ -369,7 +276,7 @@ export default function Navbar() {
                       borderRadius: '8px',
                     }}
                   >
-                    {'Get Started \u2192'}
+                    {t('nav.getStarted')} {'\u2192'}
                   </Button>
                 </>
               )}
@@ -406,8 +313,11 @@ export default function Navbar() {
             <Close />
           </IconButton>
         </Box>
+        <Box sx={{ mb: 2 }}>
+          <LanguageSwitcher />
+        </Box>
         <List>
-          {NAV_LINKS.map((link) => {
+          {NAV_LINK_KEYS.map((link) => {
             const isActive = pathname === link.href || pathname.startsWith(link.href + '/');
             return (
               <ListItem key={link.href} disablePadding>
@@ -422,7 +332,7 @@ export default function Navbar() {
                   }}
                 >
                   <ListItemText
-                    primary={link.label}
+                    primary={t(link.labelKey)}
                     primaryTypographyProps={{
                       fontWeight: isActive ? 700 : 500,
                       color: isActive ? '#C8622A' : 'inherit',
@@ -453,7 +363,7 @@ export default function Navbar() {
                 startIcon={<Person />}
                 sx={{ textTransform: 'none', justifyContent: 'flex-start' }}
               >
-                Profile
+                {t('nav.profile')}
               </Button>
               <Button
                 component={Link}
@@ -464,7 +374,7 @@ export default function Navbar() {
                 startIcon={<Settings />}
                 sx={{ textTransform: 'none', justifyContent: 'flex-start' }}
               >
-                Settings
+                {t('nav.settings')}
               </Button>
               <Button
                 onClick={() => {
@@ -485,7 +395,7 @@ export default function Navbar() {
                   },
                 }}
               >
-                Logout
+                {t('nav.logout')}
               </Button>
             </>
           ) : (
@@ -497,7 +407,7 @@ export default function Navbar() {
                 fullWidth
                 onClick={() => setMobileOpen(false)}
               >
-                Sign in
+                {t('nav.signIn')}
               </Button>
               <Button
                 component={Link}
@@ -506,7 +416,7 @@ export default function Navbar() {
                 fullWidth
                 onClick={() => setMobileOpen(false)}
               >
-                {'Get Started \u2192'}
+                {t('nav.getStarted')} {'\u2192'}
               </Button>
             </>
           )}

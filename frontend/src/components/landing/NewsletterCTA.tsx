@@ -2,8 +2,11 @@
 
 import { Box, Typography, Button, TextField, InputAdornment } from '@mui/material';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import { useTranslation } from 'react-i18next';
 
 export default function NewsletterCTA() {
+  const { t } = useTranslation();
+
   return (
     <Box
       sx={{
@@ -32,7 +35,7 @@ export default function NewsletterCTA() {
           textTransform: 'uppercase',
         }}
       >
-        Stay ahead of the curve
+        {t('landing.newsletter.title')}
       </Box>
 
       {/* Heading */}
@@ -46,9 +49,9 @@ export default function NewsletterCTA() {
           fontWeight: 700,
         }}
       >
-        New models drop every week.
+        {t('landing.newsletter.subtitle1')}
         <br />
-        Don't miss a release.
+        {t('landing.newsletter.subtitle2')}
       </Typography>
 
       {/* Subtitle */}
@@ -63,8 +66,7 @@ export default function NewsletterCTA() {
           fontSize: '0.9375rem',
         }}
       >
-        Get a curated weekly digest: new model releases, benchmark comparisons, pricing
-        changes, and prompt engineering tips — straight to your inbox.
+        {t('landing.newsletter.description')}
       </Typography>
 
       {/* Form */}
@@ -84,7 +86,7 @@ export default function NewsletterCTA() {
       >
         <TextField
           type="email"
-          placeholder="your@email.com"
+          placeholder={t('landing.newsletter.emailPlaceholder')}
           variant="outlined"
           fullWidth
           sx={{
@@ -127,7 +129,7 @@ export default function NewsletterCTA() {
             },
           }}
         >
-          Subscribe free
+          {t('landing.newsletter.subscribe')}
         </Button>
       </Box>
 
@@ -141,7 +143,7 @@ export default function NewsletterCTA() {
           fontSize: '0.8125rem',
         }}
       >
-        No spam. Unsubscribe any time. Trusted by 82K+ builders.
+        {t('landing.newsletter.disclaimer')}
       </Typography>
     </Box>
   );

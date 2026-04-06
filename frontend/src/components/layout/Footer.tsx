@@ -2,16 +2,19 @@
 
 import { Box, Container, Typography } from '@mui/material';
 import Link from 'next/link';
+import { useTranslation } from 'react-i18next';
 
 const FOOTER_LINKS = [
-  { label: 'Models', href: '/marketplace' },
-  { label: 'Research', href: '/discover' },
-  { label: 'API', href: '/chat' },
-  { label: 'Privacy', href: '#' },
-  { label: 'Terms', href: '#' },
+  { labelKey: 'footer.models', href: '/marketplace' },
+  { labelKey: 'footer.research', href: '/discover' },
+  { labelKey: 'footer.api', href: '/chat' },
+  { labelKey: 'footer.privacy', href: '#' },
+  { labelKey: 'footer.terms', href: '#' },
 ];
 
 export default function Footer() {
+  const { t } = useTranslation();
+
   return (
     <Box
       component="footer"
@@ -40,14 +43,14 @@ export default function Footer() {
               fontSize: '0.875rem',
             }}
           >
-            NexusAI Model Marketplace
+            {t('footer.brand')}
           </Typography>
 
           {/* Links */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
             {FOOTER_LINKS.map((link) => (
               <Typography
-                key={link.label}
+                key={link.labelKey}
                 component={Link}
                 href={link.href}
                 variant="body2"
@@ -60,7 +63,7 @@ export default function Footer() {
                   '&:hover': { color: '#fff' },
                 }}
               >
-                {link.label}
+                {t(link.labelKey)}
               </Typography>
             ))}
           </Box>

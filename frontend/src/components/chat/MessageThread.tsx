@@ -2,7 +2,14 @@
 
 import { useEffect, useRef } from 'react';
 import { Box, Typography, Avatar } from '@mui/material';
-import { SmartToy, Person } from '@mui/icons-material';
+import { SmartToy, Person, InsertDriveFile, Videocam } from '@mui/icons-material';
+
+interface AttachedFile {
+  name: string;
+  type: string;
+  size: number;
+  dataUrl: string;
+}
 
 interface Message {
   id: string;
@@ -10,6 +17,7 @@ interface Message {
   content: string;
   timestamp: Date;
   modelId?: string;
+  attachment?: AttachedFile;
 }
 
 interface MessageThreadProps {
@@ -19,7 +27,71 @@ interface MessageThreadProps {
   selectedModel: string;
 }
 
-function UserMessage({ content }: { content: string }) {
+function formatFileSize(bytes: number) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+function FileChip({ file }: { file: AttachedFile }) {
+  const isImage = file.type.startsWith('image/');
+  const isVideo = file.type.startsWith('video/');
+
+  const renderIcon = () => {
+    if (isImage) {
+      return (
+        <Box
+          component="img"
+          src={file.dataUrl}
+          alt={file.name}
+          sx={{ width: 24, height: 24, borderRadius: '5px', objectFit: 'cover' }}
+        />
+      );
+    }
+    if (isVideo) {
+      return <Videocam sx={{ fontSize: 16, color: 'rgba(255,255,255,0.85)' }} />;
+    }
+    return <InsertDriveFile sx={{ fontSize: 16, color: 'rgba(255,255,255,0.85)' }} />;
+  };
+
+  return (
+    <Box
+      sx={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 0.75,
+        bgcolor: 'rgba(255,255,255,0.15)',
+        border: '1px solid rgba(255,255,255,0.25)',
+        borderRadius: '10px',
+        px: 1.25,
+        py: 0.5,
+        mt: 1,
+      }}
+    >
+      {renderIcon()}
+      <Box sx={{ minWidth: 0 }}>
+        <Typography
+          sx={{
+            fontSize: '0.75rem',
+            fontWeight: 600,
+            color: '#fff',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            maxWidth: 160,
+          }}
+        >
+          {file.name}
+        </Typography>
+        <Typography sx={{ fontSize: '0.625rem', color: 'rgba(255,255,255,0.65)' }}>
+          {formatFileSize(file.size)}
+        </Typography>
+      </Box>
+    </Box>
+  );
+}
+
+function UserMessage({ content, attachment }: { content: string; attachment?: AttachedFile }) {
   return (
     <Box
       sx={{
@@ -43,6 +115,7 @@ function UserMessage({ content }: { content: string }) {
           }}
         >
           {content}
+          {attachment && <FileChip file={attachment} />}
         </Box>
         <Avatar
           sx={{
@@ -156,7 +229,7 @@ export default function MessageThread({
     >
       {messages.map((msg) =>
         msg.role === 'user' ? (
-          <UserMessage key={msg.id} content={msg.content} />
+          <UserMessage key={msg.id} content={msg.content} attachment={msg.attachment} />
         ) : (
           <AssistantMessage key={msg.id} content={msg.content} modelId={msg.modelId} />
         )
