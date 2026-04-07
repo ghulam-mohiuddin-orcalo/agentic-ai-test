@@ -39,6 +39,35 @@
   --border2: rgba(0, 0, 0, 0.12);
 }
 
+/* Dark mode CSS variable overrides */
+[data-theme="dark"] {
+  --bg: #1A1714;
+  --bg2: #211E1A;
+  --bg3: #2A2620;
+  --white: #252219;
+  --card: #252219;
+  --text: #F0ECE6;
+  --text2: #B0A899;
+  --text3: #6E6860;
+  --accent: #E07840;
+  --accent2: #C8622A;
+  --accent-lt: #2D1F14;
+  --accent-border: rgba(224, 120, 64, 0.25);
+  --blue: #6B93D6;
+  --blue-lt: #1A2340;
+  --blue-border: rgba(107, 147, 214, 0.25);
+  --teal: #4CAF8A;
+  --teal-lt: #0D2820;
+  --amber: #D4A030;
+  --amber-lt: #2A2010;
+  --rose: #E06080;
+  --rose-lt: #2D1020;
+  --border: rgba(255, 255, 255, 0.08);
+  --border2: rgba(255, 255, 255, 0.12);
+  --shadow: 0 2px 14px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 24px rgba(0, 0, 0, 0.4);
+}
+
 * {
   box-sizing: border-box;
   margin: 0;

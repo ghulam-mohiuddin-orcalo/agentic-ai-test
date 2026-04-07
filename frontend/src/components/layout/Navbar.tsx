@@ -76,10 +76,12 @@ export default function Navbar() {
         position="fixed"
         elevation={0}
         sx={{
-          bgcolor: 'rgba(255, 255, 255, 0.95)',
+          bgcolor: theme.palette.mode === 'dark'
+            ? 'rgba(37, 34, 25, 0.95)'
+            : 'rgba(255, 255, 255, 0.95)',
           backdropFilter: 'blur(12px)',
           borderBottom: '1px solid',
-          borderColor: 'rgba(0,0,0,0.08)',
+          borderColor: 'divider',
           color: 'text.primary',
         }}
       >

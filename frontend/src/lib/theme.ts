@@ -2,17 +2,20 @@ import { createTheme } from '@mui/material/styles';
 
 // Custom MUI theme matching the NexusAI demo design
 // Reference: ai-model-hub-v12 (2).html
-export const theme = createTheme({
+export function createAppTheme(mode: 'light' | 'dark' = 'light') {
+  const isDark = mode === 'dark';
+
+  return createTheme({
   palette: {
-    mode: 'light',
+    mode,
     background: {
-      default: '#F4F2EE',      // --bg (warm beige)
-      paper: '#FFFFFF',         // --card
+      default: isDark ? '#1A1714' : '#F4F2EE',
+      paper: isDark ? '#252219' : '#FFFFFF',
     },
     text: {
-      primary: '#1C1A16',       // --text (dark brown)
-      secondary: '#5A5750',     // --text2 (medium brown)
-      disabled: '#9E9B93',      // --text3 (light brown)
+      primary: isDark ? '#F0ECE6' : '#1C1A16',
+      secondary: isDark ? '#B0A899' : '#5A5750',
+      disabled: isDark ? '#6E6860' : '#9E9B93',
     },
     primary: {
       main: '#C8622A',          // --accent (terracotta)
@@ -40,7 +43,7 @@ export const theme = createTheme({
       light: '#FDEDF1',         // --rose-lt
       contrastText: '#FFFFFF',
     },
-    divider: 'rgba(0,0,0,0.08)',
+    divider: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
   },
   typography: {
     fontFamily: "'Instrument Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
@@ -212,7 +215,11 @@ export const theme = createTheme({
       },
     },
   },
-});
+  });
+}
+
+// Default light theme (for backward compat with any remaining static imports)
+export const theme = createAppTheme('light');
 
 // Custom CSS variables for additional styling
 export const customStyles = {

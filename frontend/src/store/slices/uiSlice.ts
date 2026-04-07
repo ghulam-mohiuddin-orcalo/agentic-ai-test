@@ -9,13 +9,19 @@ interface UIState {
   theme: 'light' | 'dark';
 }
 
+function getSavedTheme(): 'light' | 'dark' {
+  if (typeof window === 'undefined') return 'light';
+  const saved = localStorage.getItem('nexusai_theme');
+  return saved === 'dark' ? 'dark' : 'light';
+}
+
 const initialState: UIState = {
   sidebarOpen: true,
   rightPanelOpen: true,
   currentModal: null,
   modalData: null,
   language: 'en',
-  theme: 'light',
+  theme: getSavedTheme(),
 };
 
 const uiSlice = createSlice({
@@ -47,6 +53,9 @@ const uiSlice = createSlice({
     },
     setTheme: (state, action: PayloadAction<'light' | 'dark'>) => {
       state.theme = action.payload;
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('nexusai_theme', action.payload);
+      }
     },
   },
 });

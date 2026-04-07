@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useServerInsertedHTML } from 'next/navigation';
 import createCache from '@emotion/cache';
 import { CacheProvider } from '@emotion/react';
@@ -8,8 +8,9 @@ import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { prefixer } from 'stylis';
 import rtlPlugin from 'stylis-plugin-rtl';
-import { theme } from '@/lib/theme';
+import { createAppTheme } from '@/lib/theme';
 import { useDirection } from '@/hooks/useDirection';
+import { useAppSelector } from '@/store/hooks';
 
 // Create caches lazily to avoid module-level side effects
 let ltrCache: ReturnType<typeof createCache> | null = null;
@@ -33,13 +34,19 @@ function getRtlCache() {
 
 export default function ThemeRegistry({ children }: { children: React.ReactNode }) {
   const { direction } = useDirection();
+  const themeMode = useAppSelector((state) => state.ui.theme);
 
   const activeCache = direction === 'rtl' ? getRtlCache() : getLtrCache();
 
   const themeWithDirection = useMemo(
-    () => createTheme({ ...theme, direction }),
-    [direction]
+    () => createTheme({ ...createAppTheme(themeMode), direction }),
+    [direction, themeMode]
   );
+
+  // Sync data-theme attribute on <html> for CSS variable overrides
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', themeMode);
+  }, [themeMode]);
 
   // Collect SSR styles
   useServerInsertedHTML(() => {
