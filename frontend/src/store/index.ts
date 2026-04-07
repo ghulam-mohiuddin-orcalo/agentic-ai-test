@@ -10,6 +10,7 @@ import onboardingReducer from './slices/onboardingSlice';
 import './api/authApi';
 import './api/chatApi';
 import './api/modelsApi';
+import './api/usersApi';
 
 export const store = configureStore({
   reducer: {
