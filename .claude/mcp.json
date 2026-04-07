@@ -1,0 +1,36 @@
+{
+  "mcpServers": {
+    "jira": {
+      "command": "npx",
+      "args": [
+        "@modelcontextprotocol/server-jira"
+      ],
+      "env": {
+        "JIRA_BASE_URL": "https://your-company.atlassian.net",
+        "JIRA_EMAIL": "your-email@gmail.com",
+        "JIRA_API_TOKEN": "your-token"
+      }
+    },
+    "github": {
+      "command": "npx",
+      "args": [
+        "@modelcontextprotocol/server-github"
+      ],
+      "env": {
+        "GITHUB_TOKEN": "YOUR_GITHUB_TOKEN_HERE for authentication. You can generate a token in your GitHub account settings under Developer settings > Personal access tokens."
+      }
+    },
+    "filesystem": {
+      "command": "npx",
+      "args": [
+        "@modelcontextprotocol/server-filesystem"
+      ]
+    },
+    "terminal": {
+      "command": "npx",
+      "args": [
+        "@modelcontextprotocol/server-terminal"
+      ]
+    }
+  }
+}
