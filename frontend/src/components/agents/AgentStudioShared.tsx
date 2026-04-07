@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { ReactNode } from 'react';
+import { KeyboardEvent, ReactNode, useRef, useState } from 'react';
 import {
   Box,
   Button,
@@ -17,12 +17,14 @@ import {
   ChatBubbleOutline,
   ChevronRight,
   DataObject,
+  Edit,
   OpenInNew,
   RocketLaunch,
   Search,
   Settings,
   SmartToy,
 } from '@mui/icons-material';
+import { promptsByUseCase } from './agentStudioData';
 
 export const pageShellSx = {
   minHeight: 'calc(100vh - 64px)',
@@ -82,7 +84,7 @@ export function AgentsSidebar() {
             '&:hover': { bgcolor: '#A45C30' },
           }}
         >
-          New Agent
+          + New Agent
         </Button>
       </Paper>
 
@@ -91,7 +93,7 @@ export function AgentsSidebar() {
           Not sure where to start?
         </Typography>
         <Typography sx={{ fontSize: '0.82rem', color: '#786A5D', lineHeight: 1.5, mb: 2 }}>
-          Chat with our AI guide and describe what you want your agent to do to get a personalised setup plan.
+          Chat with our AI guide — describe what you want your agent to do and get a personalised setup plan.
         </Typography>
         <Button
           variant="outlined"
@@ -104,7 +106,7 @@ export function AgentsSidebar() {
             fontWeight: 700,
           }}
         >
-          Ask the Hub
+          Ask the Hub →
         </Button>
       </Paper>
     </Box>
@@ -146,6 +148,7 @@ export function ChecklistPanel({ items }: { items: string[] }) {
               borderRadius: 1,
               border: '1px solid rgba(79,70,61,0.22)',
               bgcolor: '#fff',
+              flexShrink: 0,
             }}
           />
           <Typography sx={{ fontSize: '0.82rem' }}>{item}</Typography>
@@ -166,8 +169,44 @@ export function HeroComposer({
   useCases: string[];
   prompts: string[];
 }) {
+  const [query, setQuery] = useState('');
+  const [activeUseCase, setActiveUseCase] = useState<string | null>(null);
+  const [submitted, setSubmitted] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Prompts shown: filtered by active use case, or the default list
+  const visiblePrompts =
+    activeUseCase && promptsByUseCase[activeUseCase]
+      ? promptsByUseCase[activeUseCase]
+      : prompts;
+
+  const handleSend = () => {
+    if (!query.trim()) return;
+    setSubmitted(true);
+    // Reset after short delay so the user can send again
+    setTimeout(() => {
+      setQuery('');
+      setSubmitted(false);
+      inputRef.current?.focus();
+    }, 1400);
+  };
+
+  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') handleSend();
+  };
+
+  const handlePromptClick = (prompt: string) => {
+    setQuery(prompt);
+    inputRef.current?.focus();
+  };
+
+  const handleUseCaseClick = (item: string) => {
+    setActiveUseCase((prev) => (prev === item ? null : item));
+  };
+
   return (
     <Box>
+      {/* Hero heading */}
       <Box sx={{ textAlign: 'center', py: { xs: 3, md: 4 } }}>
         <Typography
           sx={{
@@ -184,16 +223,26 @@ export function HeroComposer({
         <Typography sx={{ color: '#78695B', fontSize: '0.95rem' }}>{subtitle}</Typography>
       </Box>
 
+      {/* Composer input card */}
       <Paper elevation={0} sx={{ ...sectionCardSx, p: 1.5, mb: 2 }}>
         <Box
           sx={{
             borderRadius: '16px',
-            border: '1px solid rgba(108,74,42,0.10)',
+            border: '1px solid',
+            borderColor: submitted ? 'rgba(71,115,93,0.4)' : 'rgba(108,74,42,0.10)',
             bgcolor: '#FBF7F3',
             p: 2,
+            transition: 'border-color 0.2s',
           }}
         >
           <input
+            ref={inputRef}
+            value={query}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              if (submitted) setSubmitted(false);
+            }}
+            onKeyDown={handleKeyDown}
             aria-label="Agent query"
             placeholder="What should we work on next?"
             style={{
@@ -204,18 +253,30 @@ export function HeroComposer({
               fontSize: '15px',
               color: '#2A241D',
               paddingBottom: '12px',
+              fontFamily: 'inherit',
             }}
           />
           <Divider sx={{ borderColor: 'rgba(108,74,42,0.08)' }} />
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2, pt: 1.25, alignItems: 'center', flexWrap: 'wrap' }}>
+          <Box
+            sx={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              gap: 2,
+              pt: 1.25,
+              alignItems: 'center',
+              flexWrap: 'wrap',
+            }}
+          >
             <Box sx={{ display: 'flex', gap: 1, color: '#A45C30' }}>
-              <ChatBubbleOutline sx={{ fontSize: 18 }} />
-              <Search sx={{ fontSize: 18 }} />
-              <DataObject sx={{ fontSize: 18 }} />
+              <ChatBubbleOutline sx={{ fontSize: 18, cursor: 'pointer', opacity: 0.7, '&:hover': { opacity: 1 } }} />
+              <Search sx={{ fontSize: 18, cursor: 'pointer', opacity: 0.7, '&:hover': { opacity: 1 } }} />
+              <DataObject sx={{ fontSize: 18, cursor: 'pointer', opacity: 0.7, '&:hover': { opacity: 1 } }} />
             </Box>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <Chip label="Agent" size="small" sx={{ bgcolor: '#EFE7DF', color: '#675B4E' }} />
               <Button
+                onClick={handleSend}
+                disabled={!query.trim() || submitted}
                 variant="contained"
                 disableElevation
                 sx={{
@@ -223,44 +284,82 @@ export function HeroComposer({
                   width: 44,
                   height: 44,
                   borderRadius: '50%',
-                  bgcolor: '#B96836',
-                  '&:hover': { bgcolor: '#A45C30' },
+                  bgcolor: submitted ? '#47735D' : '#B96836',
+                  transition: 'background-color 0.2s',
+                  '&:hover': { bgcolor: submitted ? '#47735D' : '#A45C30' },
+                  '&:disabled': { bgcolor: '#D9CEC3', color: '#fff' },
                 }}
               >
-                <ArrowForward sx={{ fontSize: 20 }} />
+                {submitted ? '✓' : <ArrowForward sx={{ fontSize: 20 }} />}
               </Button>
             </Box>
           </Box>
         </Box>
       </Paper>
 
+      {/* Use-case tab chips */}
       <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 1.5 }}>
-        <Chip label="Use cases" sx={{ bgcolor: '#1F1B18', color: '#fff', borderRadius: '999px', fontWeight: 700 }} />
-        {useCases.map((item) => (
-          <Chip
-            key={item}
-            label={item}
-            sx={{
-              bgcolor: '#FFFDFC',
-              border: '1px solid rgba(108,74,42,0.12)',
-              color: '#4F463D',
-              borderRadius: '999px',
-            }}
-          />
-        ))}
+        <Chip
+          label="Use cases"
+          onClick={() => setActiveUseCase(null)}
+          sx={{
+            bgcolor: activeUseCase === null ? '#1F1B18' : '#FFFDFC',
+            color: activeUseCase === null ? '#fff' : '#4F463D',
+            border: activeUseCase === null ? 'none' : '1px solid rgba(108,74,42,0.12)',
+            borderRadius: '999px',
+            fontWeight: 700,
+            cursor: 'pointer',
+            transition: 'all 0.15s',
+          }}
+        />
+        {useCases.map((item) => {
+          const active = activeUseCase === item;
+          return (
+            <Chip
+              key={item}
+              label={item}
+              onClick={() => handleUseCaseClick(item)}
+              sx={{
+                bgcolor: active ? '#FFF1E8' : '#FFFDFC',
+                border: '1px solid',
+                borderColor: active ? '#D4956A' : 'rgba(108,74,42,0.12)',
+                color: active ? '#B96836' : '#4F463D',
+                borderRadius: '999px',
+                fontWeight: active ? 700 : 400,
+                cursor: 'pointer',
+                transition: 'all 0.15s',
+                '&:hover': { borderColor: '#D4956A', color: '#B96836' },
+              }}
+            />
+          );
+        })}
       </Box>
 
+      {/* Prompt suggestion list */}
       <Paper elevation={0} sx={{ ...sectionCardSx, p: 1 }}>
-        {prompts.map((prompt, index) => (
+        {visiblePrompts.map((prompt, index) => (
           <Box
             key={prompt}
+            onClick={() => handlePromptClick(prompt)}
             sx={{
               display: 'flex',
               alignItems: 'center',
               gap: 1.25,
               px: 1.5,
               py: 1.25,
-              borderBottom: index === prompts.length - 1 ? 'none' : '1px solid rgba(108,74,42,0.08)',
+              borderBottom:
+                index === visiblePrompts.length - 1
+                  ? 'none'
+                  : '1px solid rgba(108,74,42,0.08)',
+              cursor: 'pointer',
+              borderRadius:
+                index === 0
+                  ? '20px 20px 0 0'
+                  : index === visiblePrompts.length - 1
+                  ? '0 0 20px 20px'
+                  : 0,
+              transition: 'background-color 0.12s',
+              '&:hover': { bgcolor: '#FAF5F0' },
             }}
           >
             <Box
@@ -278,11 +377,28 @@ export function HeroComposer({
             >
               <RocketLaunch sx={{ fontSize: 16 }} />
             </Box>
-            <Typography sx={{ flex: 1, color: '#4A4037', fontSize: '0.9rem' }}>{prompt}</Typography>
+            <Typography sx={{ flex: 1, color: '#4A4037', fontSize: '0.9rem' }}>
+              {prompt}
+            </Typography>
           </Box>
         ))}
-        <Box sx={{ px: 1.5, py: 1.25, display: 'flex', justifyContent: 'space-between', color: '#7A6D61' }}>
-          <Typography sx={{ fontSize: '0.84rem', fontWeight: 600 }}>View all suggestions</Typography>
+        <Box
+          sx={{
+            px: 1.5,
+            py: 1.25,
+            display: 'flex',
+            justifyContent: 'space-between',
+            color: '#7A6D61',
+            cursor: 'pointer',
+            borderTop: '1px solid rgba(108,74,42,0.08)',
+            borderRadius: '0 0 20px 20px',
+            transition: 'background-color 0.12s',
+            '&:hover': { bgcolor: '#FAF5F0' },
+          }}
+        >
+          <Typography sx={{ fontSize: '0.84rem', fontWeight: 600 }}>
+            View all suggestions
+          </Typography>
           <ChevronRight sx={{ fontSize: 18 }} />
         </Box>
       </Paper>
@@ -302,6 +418,7 @@ export function TemplatesRow({
     description: string;
     model: string;
     tags: string[];
+    emoji?: string;
   }>;
   buildHref?: string;
 }) {
@@ -315,15 +432,38 @@ export function TemplatesRow({
       </Box>
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)', xl: 'repeat(6, 1fr)' }, gap: 1.5 }}>
         {templates.map((agent) => (
-          <Paper key={agent.id} elevation={0} sx={{ ...sectionCardSx, p: 2, minHeight: 170 }}>
-            <Typography sx={{ fontWeight: 800, color: '#241E17', mb: 1 }}>{agent.name}</Typography>
+          <Paper
+            key={agent.id}
+            component={Link}
+            href={`/agents/${agent.id}`}
+            elevation={0}
+            sx={{ ...sectionCardSx, p: 2, minHeight: 170, textDecoration: 'none', color: 'inherit' }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+              <Box
+                sx={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: '10px',
+                  bgcolor: '#F8ECDD',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '1rem',
+                  flexShrink: 0,
+                }}
+              >
+                {agent.emoji || '🤖'}
+              </Box>
+              <Typography sx={{ fontWeight: 800, color: '#241E17', lineHeight: 1.2, fontSize: '0.9rem' }}>{agent.name}</Typography>
+            </Box>
             <Typography sx={{ fontSize: '0.82rem', color: '#76695E', lineHeight: 1.5, mb: 1.5 }}>
               {agent.description}
             </Typography>
             <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap', mb: 1 }}>
-              <Chip label={agent.model} size="small" sx={{ bgcolor: '#EEF2FF', color: '#4F46E5' }} />
-              {agent.tags.slice(0, 2).map((tag) => (
-                <Chip key={tag} label={tag} size="small" sx={{ bgcolor: '#F7EAE1', color: '#B96836' }} />
+              <Chip label={agent.model} size="small" sx={{ bgcolor: '#EEF2FF', color: '#4F46E5', fontSize: '0.72rem' }} />
+              {agent.tags.slice(0, 1).map((tag) => (
+                <Chip key={tag} label={tag} size="small" sx={{ bgcolor: '#F7EAE1', color: '#B96836', fontSize: '0.72rem' }} />
               ))}
             </Box>
           </Paper>
@@ -356,16 +496,16 @@ export function TemplatesRow({
 
 export function StatCard({ label, value }: { label: string; value: string }) {
   return (
-    <Paper elevation={0} sx={{ ...sectionCardSx, p: 1.5, textAlign: 'center' }}>
-      <Typography sx={{ fontWeight: 800, color: '#231D17', fontSize: '1.2rem' }}>{value}</Typography>
-      <Typography sx={{ fontSize: '0.78rem', color: '#7A6D61' }}>{label}</Typography>
+    <Paper elevation={0} sx={{ ...sectionCardSx, p: 1.5, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <Typography sx={{ fontSize: '0.82rem', color: '#7A6D61' }}>{label}</Typography>
+      <Typography sx={{ fontWeight: 800, color: '#231D17', fontSize: '1.05rem' }}>{value}</Typography>
     </Paper>
   );
 }
 
 export function SideInfoCard({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <Paper elevation={0} sx={{ ...sectionCardSx, p: 1.5 }}>
+    <Paper elevation={0} sx={{ ...sectionCardSx, p: 1.5, mb: 1.5 }}>
       <Typography sx={{ fontSize: '0.75rem', fontWeight: 800, color: '#A2978B', letterSpacing: '0.08em', mb: 1 }}>
         {title.toUpperCase()}
       </Typography>
@@ -374,19 +514,31 @@ export function SideInfoCard({ title, children }: { title: string; children: Rea
   );
 }
 
-export function InfoAction({ label }: { label: string }) {
+export function InfoAction({
+  label,
+  icon,
+  onClick,
+  danger,
+}: {
+  label: string;
+  icon?: ReactNode;
+  onClick?: () => void;
+  danger?: boolean;
+}) {
   return (
     <Button
       fullWidth
-      startIcon={<OpenInNew />}
+      startIcon={icon || <Edit sx={{ fontSize: 16 }} />}
       variant="outlined"
+      onClick={onClick}
       sx={{
         justifyContent: 'flex-start',
         textTransform: 'none',
         borderRadius: '12px',
-        borderColor: 'rgba(108,74,42,0.10)',
-        color: '#5E5349',
+        borderColor: danger ? 'rgba(200,50,50,0.2)' : 'rgba(108,74,42,0.10)',
+        color: danger ? '#c0392b' : '#5E5349',
         fontWeight: 600,
+        fontSize: '0.875rem',
       }}
     >
       {label}
