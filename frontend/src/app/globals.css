@@ -247,3 +247,17 @@ body {
   color: var(--rose);
 }
 
+/* Markdown content rendering */
+.markdown-content {
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+.markdown-content > *:first-child {
+  margin-top: 0;
+}
+
+.markdown-content > *:last-child {
+  margin-bottom: 0;
+}
+

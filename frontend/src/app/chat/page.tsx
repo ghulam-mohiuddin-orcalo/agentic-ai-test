@@ -380,6 +380,30 @@ function ChatPageContent() {
     URL.revokeObjectURL(url);
   }, [messages, selectedModel]);
 
+  const handleRegenerate = useCallback(
+    (messageId: string) => {
+      const idx = messages.findIndex((m) => m.id === messageId);
+      if (idx < 0) return;
+
+      // Find the user message before this assistant message
+      let userContent = '';
+      for (let i = idx - 1; i >= 0; i--) {
+        if (messages[i].role === 'user') {
+          userContent = messages[i].content;
+          break;
+        }
+      }
+      if (!userContent) return;
+
+      // Remove the assistant message and re-stream
+      setMessages((prev) => prev.filter((m) => m.id !== messageId));
+      setIsStreaming(true);
+      setStreamingContent('');
+      streamViaApi(userContent, conversationId);
+    },
+    [messages, conversationId, streamViaApi]
+  );
+
   const handleActionClick = useCallback((title: string) => {
     handleSend(`I'd like to: ${title}`);
   }, [handleSend]);
@@ -469,6 +493,7 @@ function ChatPageContent() {
             isStreaming={isStreaming}
             streamingContent={streamingContent}
             selectedModel={selectedModel}
+            onRegenerate={handleRegenerate}
           />
         ) : (
           <Box sx={{ flex: 1, overflowY: 'auto', display: 'flex' }}>

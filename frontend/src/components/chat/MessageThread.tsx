@@ -1,9 +1,21 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
-import { Box, Typography, Avatar } from '@mui/material';
-import { SmartToy, Person, InsertDriveFile, Videocam, Audiotrack } from '@mui/icons-material';
+import { useEffect, useRef, useState, useCallback } from 'react';
+import { Box, Typography, Avatar, IconButton, Tooltip } from '@mui/material';
+import {
+  SmartToy,
+  Person,
+  InsertDriveFile,
+  Videocam,
+  Audiotrack,
+  ContentCopy,
+  Check,
+  Refresh,
+  ThumbUpOutlined,
+  ThumbDownOutlined,
+} from '@mui/icons-material';
 import type { AttachedFile } from '@/store/slices/chatSlice';
+import MarkdownRenderer from './MarkdownRenderer';
 
 interface Message {
   id: string;
@@ -19,6 +31,7 @@ interface MessageThreadProps {
   isStreaming: boolean;
   streamingContent: string;
   selectedModel: string;
+  onRegenerate?: (messageId: string) => void;
 }
 
 function formatFileSize(bytes: number) {
@@ -191,17 +204,114 @@ function UserMessage({ content, attachment }: { content: string; attachment?: At
   );
 }
 
+function MessageActions({
+  content,
+  messageId,
+  onRegenerate,
+}: {
+  content: string;
+  messageId: string;
+  onRegenerate?: (id: string) => void;
+}) {
+  const [copied, setCopied] = useState(false);
+  const [liked, setLiked] = useState<'up' | 'down' | null>(null);
+
+  const handleCopy = useCallback(() => {
+    navigator.clipboard.writeText(content).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }, [content]);
+
+  return (
+    <Box
+      sx={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 0.25,
+        mt: 1,
+        opacity: 0.5,
+        transition: 'opacity 0.2s',
+        '.msg-container:hover &': { opacity: 1 },
+      }}
+    >
+      <Tooltip title={copied ? 'Copied!' : 'Copy'} arrow>
+        <IconButton
+          onClick={handleCopy}
+          size="small"
+          sx={{
+            p: 0.5,
+            color: copied ? '#4CAF50' : 'var(--text3)',
+            '&:hover': { color: copied ? '#4CAF50' : 'var(--text)', bgcolor: 'var(--bg2)' },
+          }}
+        >
+          {copied ? <Check sx={{ fontSize: 15 }} /> : <ContentCopy sx={{ fontSize: 15 }} />}
+        </IconButton>
+      </Tooltip>
+
+      {onRegenerate && (
+        <Tooltip title="Regenerate" arrow>
+          <IconButton
+            onClick={() => onRegenerate(messageId)}
+            size="small"
+            sx={{
+              p: 0.5,
+              color: 'var(--text3)',
+              '&:hover': { color: 'var(--text)', bgcolor: 'var(--bg2)' },
+            }}
+          >
+            <Refresh sx={{ fontSize: 15 }} />
+          </IconButton>
+        </Tooltip>
+      )}
+
+      <Tooltip title="Good response" arrow>
+        <IconButton
+          onClick={() => setLiked(liked === 'up' ? null : 'up')}
+          size="small"
+          sx={{
+            p: 0.5,
+            color: liked === 'up' ? 'var(--teal)' : 'var(--text3)',
+            '&:hover': { color: 'var(--teal)', bgcolor: 'var(--teal-lt)' },
+          }}
+        >
+          <ThumbUpOutlined sx={{ fontSize: 15 }} />
+        </IconButton>
+      </Tooltip>
+
+      <Tooltip title="Bad response" arrow>
+        <IconButton
+          onClick={() => setLiked(liked === 'down' ? null : 'down')}
+          size="small"
+          sx={{
+            p: 0.5,
+            color: liked === 'down' ? 'var(--rose)' : 'var(--text3)',
+            '&:hover': { color: 'var(--rose)', bgcolor: 'var(--rose-lt)' },
+          }}
+        >
+          <ThumbDownOutlined sx={{ fontSize: 15 }} />
+        </IconButton>
+      </Tooltip>
+    </Box>
+  );
+}
+
 function AssistantMessage({
   content,
   streaming,
   modelId,
+  messageId,
+  onRegenerate,
 }: {
   content: string;
   streaming?: boolean;
   modelId?: string;
+  messageId?: string;
+  onRegenerate?: (id: string) => void;
 }) {
   return (
     <Box
+      className="msg-container"
       sx={{
         display: 'flex',
         justifyContent: 'flex-start',
@@ -209,7 +319,7 @@ function AssistantMessage({
         animation: 'fadeUp 0.3s ease',
       }}
     >
-      <Box sx={{ maxWidth: '75%', display: 'flex', gap: 1.5, alignItems: 'flex-start' }}>
+      <Box sx={{ maxWidth: '80%', display: 'flex', gap: 1.5, alignItems: 'flex-start' }}>
         <Avatar
           sx={{
             width: 30,
@@ -221,28 +331,26 @@ function AssistantMessage({
         >
           <SmartToy sx={{ fontSize: 16, color: 'var(--accent)' }} />
         </Avatar>
-        <Box>
+        <Box sx={{ minWidth: 0 }}>
           <Box
             sx={{
               bgcolor: 'var(--card)',
               border: '1px solid var(--border)',
               borderRadius: '4px 16px 16px 16px',
-              px: 2,
-              py: 1.25,
-              fontSize: '0.9375rem',
-              lineHeight: 1.6,
+              px: 2.5,
+              py: 1.5,
               color: 'var(--text)',
               boxShadow: 'var(--shadow)',
             }}
           >
-            {content}
+            <MarkdownRenderer content={content} />
             {streaming && (
               <Box
                 component="span"
                 sx={{
                   display: 'inline-block',
-                  width: 8,
-                  height: 14,
+                  width: 7,
+                  height: 16,
                   bgcolor: 'var(--accent)',
                   borderRadius: 1,
                   ml: 0.5,
@@ -252,6 +360,17 @@ function AssistantMessage({
               />
             )}
           </Box>
+
+          {/* Action buttons - only show when not streaming */}
+          {!streaming && messageId && (
+            <MessageActions
+              content={content}
+              messageId={messageId}
+              onRegenerate={onRegenerate}
+            />
+          )}
+
+          {/* Model label */}
           {modelId && !streaming && (
             <Typography sx={{ fontSize: '0.6875rem', color: 'var(--text3)', mt: 0.5, pl: 0.5 }}>
               {modelId}
@@ -268,6 +387,7 @@ export default function MessageThread({
   isStreaming,
   streamingContent,
   selectedModel,
+  onRegenerate,
 }: MessageThreadProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -290,12 +410,22 @@ export default function MessageThread({
         msg.role === 'user' ? (
           <UserMessage key={msg.id} content={msg.content} attachment={msg.attachment} />
         ) : (
-          <AssistantMessage key={msg.id} content={msg.content} modelId={msg.modelId} />
+          <AssistantMessage
+            key={msg.id}
+            content={msg.content}
+            modelId={msg.modelId}
+            messageId={msg.id}
+            onRegenerate={onRegenerate}
+          />
         )
       )}
 
       {isStreaming && streamingContent && (
-        <AssistantMessage content={streamingContent} streaming modelId={selectedModel} />
+        <AssistantMessage
+          content={streamingContent}
+          streaming
+          modelId={selectedModel}
+        />
       )}
 
       {isStreaming && !streamingContent && (
