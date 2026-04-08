@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -15,16 +15,26 @@ import {
   FormControlLabel,
 } from '@mui/material';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
+import { useTranslation } from 'react-i18next';
 import { useLoginMutation } from '@/store/api/authApi';
 import { useAppDispatch } from '@/store/hooks';
 import { setCredentials } from '@/store/slices/authSlice';
 
 export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
+  );
+}
+
+function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const dispatch = useAppDispatch();
   const [login, { isLoading }] = useLoginMutation();
 
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -38,13 +48,13 @@ export default function LoginPage() {
     const errors: Record<string, string> = {};
 
     if (!formData.email.trim()) {
-      errors.email = 'Email is required';
+      errors.email = t('auth.login.emailRequired');
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      errors.email = 'Invalid email format';
+      errors.email = t('auth.login.emailInvalid');
     }
 
     if (!formData.password) {
-      errors.password = 'Password is required';
+      errors.password = t('auth.login.passwordRequired');
     }
 
     setFieldErrors(errors);
@@ -75,7 +85,7 @@ export default function LoginPage() {
       const redirectTo = searchParams.get('redirect') || '/chat';
       router.push(redirectTo);
     } catch (err: any) {
-      setError(err?.data?.message || 'Login failed. Please check your credentials.');
+      setError(err?.data?.message || t('auth.login.error'));
     }
   };
 
@@ -122,7 +132,7 @@ export default function LoginPage() {
             Nexus<span style={{ color: '#C8622A' }}>AI</span>
           </Typography>
           <Typography sx={{ fontSize: '0.9375rem', color: 'var(--text2)' }}>
-            Sign in to your account
+            {t('auth.login.title')}
           </Typography>
         </Box>
 
@@ -147,12 +157,12 @@ export default function LoginPage() {
           {/* Email */}
           <Box sx={{ mb: 2.5 }}>
             <Typography sx={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text)', mb: 1 }}>
-              Email Address
+              {t('auth.login.email')}
             </Typography>
             <TextField
               fullWidth
               type="email"
-              placeholder="you@example.com"
+              placeholder={t('auth.login.emailPlaceholder')}
               value={formData.email}
               onChange={handleChange('email')}
               error={!!fieldErrors.email}
@@ -172,12 +182,12 @@ export default function LoginPage() {
           {/* Password */}
           <Box sx={{ mb: 2 }}>
             <Typography sx={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text)', mb: 1 }}>
-              Password
+              {t('auth.login.password')}
             </Typography>
             <TextField
               fullWidth
               type={showPassword ? 'text' : 'password'}
-              placeholder="••••••••"
+              placeholder={t('auth.register.passwordPlaceholder')}
               value={formData.password}
               onChange={handleChange('password')}
               error={!!fieldErrors.password}
@@ -223,7 +233,7 @@ export default function LoginPage() {
               }
               label={
                 <Typography sx={{ fontSize: '0.875rem', color: 'var(--text2)' }}>
-                  Remember me
+                  {t('auth.login.rememberMe')}
                 </Typography>
               }
             />
@@ -236,7 +246,7 @@ export default function LoginPage() {
                 fontWeight: 600,
               }}
             >
-              Forgot password?
+              {t('auth.login.forgotPassword')}
             </Link>
           </Box>
 
@@ -258,12 +268,12 @@ export default function LoginPage() {
               mb: 2,
             }}
           >
-            {isLoading ? 'Signing in...' : 'Sign in'}
+            {isLoading ? t('auth.login.submitting') : t('auth.login.submit')}
           </Button>
 
           {/* Register Link */}
           <Typography sx={{ textAlign: 'center', fontSize: '0.875rem', color: 'var(--text2)' }}>
-            Don't have an account?{' '}
+            {t('auth.login.noAccount')}{' '}
             <Link
               href="/register"
               style={{
@@ -272,7 +282,7 @@ export default function LoginPage() {
                 fontWeight: 600,
               }}
             >
-              Create one
+              {t('auth.login.createAccount')}
             </Link>
           </Typography>
         </Box>
@@ -280,7 +290,7 @@ export default function LoginPage() {
         {/* Guest Access */}
         <Box sx={{ mt: 3, textAlign: 'center' }}>
           <Typography sx={{ fontSize: '0.875rem', color: 'var(--text3)', mb: 1 }}>
-            Or continue as guest
+            {t('auth.login.guestContinue')}
           </Typography>
           <Button
             onClick={() => router.push('/chat')}
@@ -297,7 +307,7 @@ export default function LoginPage() {
               },
             }}
           >
-            Continue as Guest
+            {t('auth.login.guestButton')}
           </Button>
         </Box>
       </Box>

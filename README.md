@@ -6,15 +6,18 @@
 [![NestJS](https://img.shields.io/badge/NestJS-10.4-E0234E?logo=nestjs)](https://nestjs.com/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript)](https://www.typescriptlang.org/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791?logo=postgresql)](https://www.postgresql.org/)
+[![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker)](https://www.docker.com/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-## 📋 Table of Contents
+## Table of Contents
 
 - [Overview](#overview)
 - [Features](#features)
 - [Tech Stack](#tech-stack)
 - [Architecture](#architecture)
 - [Getting Started](#getting-started)
+  - [Quick Start (Docker)](#quick-start-docker)
+  - [Local Development](#local-development)
 - [Project Structure](#project-structure)
 - [API Documentation](#api-documentation)
 - [Development](#development)
@@ -22,7 +25,7 @@
 - [Contributing](#contributing)
 - [License](#license)
 
-## 🌟 Overview
+## Overview
 
 NexusAI is a modern, full-stack platform that enables users to:
 - Browse and compare 525+ AI models from top providers (OpenAI, Anthropic, Google, etc.)
@@ -31,18 +34,16 @@ NexusAI is a modern, full-stack platform that enables users to:
 - Manage conversations with persistent storage for authenticated users
 - Access real-time streaming responses via WebSocket
 
-**Live Demo**: [Coming Soon]
+## Features
 
-## ✨ Features
-
-### 🔐 Authentication & Authorization
+### Authentication & Authorization
 - **User Registration** with email validation and password requirements
 - **JWT-based Authentication** with access and refresh tokens
 - **Guest Mode** for unauthenticated users with session storage
 - **Protected Routes** with automatic token refresh
 - **User Profile Management** with avatar and settings
 
-### 💬 Chat System
+### Chat System
 - **Multi-Model Support** - Switch between GPT-4, Claude, Gemini, and more
 - **Real-time Streaming** - WebSocket-based streaming responses
 - **Conversation Management** - Create, view, and delete conversations
@@ -51,7 +52,7 @@ NexusAI is a modern, full-stack platform that enables users to:
   - **Guest**: SessionStorage with temporary persistence
 - **Message History** - Full conversation context and replay
 
-### 🤖 Agent Builder
+### Agent Builder
 - **Visual Agent Creator** - 4-step wizard for building custom agents
 - **Model Selection** - Choose from multiple AI providers
 - **Tool Configuration** - Enable web search, code execution, file operations, API calls
@@ -59,21 +60,19 @@ NexusAI is a modern, full-stack platform that enables users to:
 - **Parameter Tuning** - Adjust temperature, max tokens, top-p
 - **Agent Templates** - Pre-built agents for common use cases
 
-### 🎨 User Interface
+### User Interface
 - **Modern Design** - Clean, professional UI with Material-UI components
 - **Responsive Layout** - Mobile-first design that works on all devices
-- **Dark/Light Mode** - [Coming Soon]
 - **Internationalization** - Multi-language support (EN, ES, FR, DE, ZH)
-- **Accessibility** - WCAG 2.1 compliant
 
-### 📊 Marketplace
+### Marketplace
 - **Model Discovery** - Browse 525+ AI models with detailed information
 - **Advanced Filtering** - Filter by provider, price, rating, license, tags
 - **Model Comparison** - Side-by-side comparison of capabilities
 - **User Reviews** - Community ratings and feedback
 - **Usage Analytics** - Track token usage, costs, and performance
 
-## 🛠 Tech Stack
+## Tech Stack
 
 ### Frontend
 - **Framework**: [Next.js 16.2](https://nextjs.org/) (App Router)
@@ -95,13 +94,13 @@ NexusAI is a modern, full-stack platform that enables users to:
 - **Validation**: [class-validator](https://github.com/typestack/class-validator)
 
 ### Infrastructure
-- **Database**: PostgreSQL 16 (Docker)
-- **Cache**: Redis 7 (Coming Soon)
+- **Containerization**: Docker + Docker Compose
+- **Database**: PostgreSQL 16 (Alpine)
+- **Cache**: Redis 7 (Alpine)
 - **Storage**: AWS S3 (Coming Soon)
 - **Vector DB**: Pinecone (Coming Soon)
-- **Queue**: Bull + Redis (Coming Soon)
 
-## 🏗 Architecture
+## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -132,99 +131,156 @@ NexusAI is a modern, full-stack platform that enables users to:
 └─────────────────────────────────────────────────────────────┘
 ```
 
-### Key Design Patterns
-- **Modular Architecture** - Feature-based modules for scalability
-- **Repository Pattern** - Data access abstraction with Prisma
-- **Dependency Injection** - NestJS DI container for loose coupling
-- **API Gateway Pattern** - Unified entry point for all services
-- **Event-Driven** - WebSocket for real-time communication
-- **Optimistic Updates** - Instant UI feedback with background sync
+## Getting Started
 
-## 🚀 Getting Started
+### Quick Start (Docker)
 
-### Prerequisites
+The fastest way to get NexusAI running. One command starts everything.
 
-- **Node.js** 20.x or higher
-- **npm** 10.x or higher
-- **Docker** (for PostgreSQL)
-- **Git**
+#### Prerequisites
 
-### Installation
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (includes Docker Compose)
+- [Node.js](https://nodejs.org/) 22.x (for building before Docker)
 
-1. **Clone the repository**
+#### 1. Clone and configure
+
 ```bash
 git clone https://github.com/yourusername/nexusai.git
 cd nexusai
-```
 
-2. **Start PostgreSQL database**
-```bash
-docker run --name nexusai-postgres \
-  -e POSTGRES_PASSWORD=postgres \
-  -e POSTGRES_DB=nexusai \
-  -p 5432:5432 \
-  -d postgres:16-alpine
-```
-
-3. **Setup Backend**
-```bash
-cd backend
-
-# Install dependencies
-npm install
-
-# Configure environment variables
+# Copy environment files
 cp .env.example .env
-# Edit .env with your configuration
-
-# Run database migrations
-npx prisma migrate dev
-
-# Generate Prisma client
-npx prisma generate
-
-# Seed database (optional)
-npm run prisma:seed
-
-# Start development server
-npm run start:dev
 ```
 
-Backend will run on `http://localhost:5001`
+Edit `.env` and fill in your secrets (JWT secrets, AI provider API keys, etc.).
 
-4. **Setup Frontend**
+#### 2. Install dependencies and build
+
 ```bash
-cd ../frontend
+# Install all dependencies (root + backend + frontend)
+npm run install:all
 
-# Install dependencies
-npm install
+# Build backend
+cd backend
+npx prisma generate
+npm run build
+cd ..
 
-# Configure environment variables
-cp .env.example .env.local
-# Edit .env.local with your configuration
+# Build frontend
+cd frontend
+npm run build
+cd ..
+```
 
-# Start development server
+#### 3. Start all services
+
+```bash
+docker compose up -d
+```
+
+That's it. All four services start together:
+
+| Service | Container | Port | URL |
+|---------|-----------|------|-----|
+| Frontend | `nexusai-frontend` | 3000 | http://localhost:3000 |
+| Backend | `nexusai-backend` | 5001 | http://localhost:5001 |
+| PostgreSQL | `nexusai-postgres` | 5432 | localhost:5432 |
+| Redis | `nexusai-redis` | 6379 | localhost:6379 |
+
+#### Useful Docker commands
+
+```bash
+# Start (detached)
+docker compose up -d
+
+# Start with rebuild
+docker compose up --build -d
+
+# Stop all services
+docker compose down
+
+# Stop and remove database volumes (resets all data)
+docker compose down -v
+
+# View logs
+docker compose logs -f
+
+# View logs for a specific service
+docker compose logs -f backend
+
+# Restart a single service
+docker compose restart backend
+
+# Check status
+docker compose ps
+```
+
+### Local Development
+
+For active development with hot-reload on both frontend and backend.
+
+#### Prerequisites
+
+- **Node.js** 22.x or higher
+- **npm** 10.x or higher
+- **Docker** (for PostgreSQL and Redis)
+- **Git**
+
+#### 1. Start infrastructure services
+
+```bash
+# Start only PostgreSQL and Redis
+docker compose up postgres redis -d
+```
+
+#### 2. Configure environment
+
+```bash
+# Backend config
+cp .env.example backend/.env
+# Edit backend/.env with your configuration
+
+# Frontend config  
+cp .env.example frontend/.env.local
+# Edit frontend/.env.local with your configuration
+```
+
+#### 3. Run both services with one command
+
+```bash
+# From project root - runs backend + frontend concurrently
 npm run dev
 ```
 
-Frontend will run on `http://localhost:3000`
+Or run individually:
 
-### Environment Variables
+```bash
+# Backend (port 5001)
+cd backend
+npm install
+npx prisma generate
+npm run start:dev
 
-#### Backend (.env)
+# Frontend (port 3000) - in a separate terminal
+cd frontend
+npm install
+npm run dev
+```
+
+#### Environment Variables
+
+**Backend** (`backend/.env`)
 ```env
 # Database
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/nexusai
+DATABASE_URL=postgresql://nexusai:nexusai_pass@localhost:5432/nexusai
+REDIS_URL=redis://localhost:6379
+
+# Server
+PORT=5001
 
 # JWT
 JWT_SECRET=your-256-bit-secret-key-here
 JWT_REFRESH_SECRET=your-256-bit-refresh-secret-key-here
-JWT_EXPIRATION=15m
-JWT_REFRESH_EXPIRATION=7d
-
-# Server
-PORT=5001
-NODE_ENV=development
 
 # CORS
 ALLOWED_ORIGINS=http://localhost:3000
@@ -235,7 +291,7 @@ ANTHROPIC_API_KEY=sk-ant-...
 GOOGLE_AI_API_KEY=...
 ```
 
-#### Frontend (.env.local)
+**Frontend** (`frontend/.env.local`)
 ```env
 # Backend API
 NEXT_PUBLIC_API_URL=http://localhost:5001/api/v1
@@ -243,16 +299,39 @@ NEXT_PUBLIC_WS_URL=http://localhost:5001
 
 # App
 NEXT_PUBLIC_APP_NAME=NexusAI
-
-# Mock Data (for development without backend)
-NEXT_PUBLIC_USE_MOCK_DATA=false
 ```
 
-## 📁 Project Structure
+**Root** (`.env` - used by Docker Compose)
+```env
+# PostgreSQL
+POSTGRES_USER=nexusai
+POSTGRES_PASSWORD=nexusai_pass
+POSTGRES_DB=nexusai
+
+# JWT Secrets
+JWT_SECRET=your-secret-min-32-chars
+JWT_REFRESH_SECRET=your-refresh-secret-min-32-chars
+
+# CORS
+ALLOWED_ORIGINS=http://localhost:3000
+
+# AI Provider keys
+OPENAI_API_KEY=
+ANTHROPIC_API_KEY=
+```
+
+## Project Structure
 
 ```
 nexusai/
+├── docker-compose.yml          # Full stack Docker Compose
+├── package.json                # Root package (concurrently, scripts)
+├── .env.example                # Environment template
+│
 ├── backend/                    # NestJS backend
+│   ├── Dockerfile              # Backend Docker image
+│   ├── prisma/
+│   │   └── schema.prisma       # Database schema
 │   ├── src/
 │   │   ├── modules/
 │   │   │   ├── auth/          # Authentication & JWT
@@ -263,12 +342,12 @@ nexusai/
 │   │   │   └── usage/         # Analytics & tracking
 │   │   ├── common/            # Shared utilities
 │   │   ├── config/            # Configuration
-│   │   ├── prisma/            # Database schema
+│   │   ├── prisma/            # Prisma service
 │   │   └── main.ts            # Entry point
-│   ├── test/                  # Tests
 │   └── package.json
 │
 ├── frontend/                   # Next.js frontend
+│   ├── Dockerfile              # Frontend Docker image
 │   ├── src/
 │   │   ├── app/               # App Router pages
 │   │   │   ├── (auth)/        # Auth pages
@@ -276,10 +355,6 @@ nexusai/
 │   │   │   ├── agents/        # Agent builder
 │   │   │   └── marketplace/   # Model marketplace
 │   │   ├── components/        # React components
-│   │   │   ├── auth/          # Auth components
-│   │   │   ├── chat/          # Chat components
-│   │   │   ├── agents/        # Agent components
-│   │   │   └── layout/        # Layout components
 │   │   ├── store/             # Redux store
 │   │   │   ├── api/           # RTK Query APIs
 │   │   │   └── slices/        # Redux slices
@@ -290,7 +365,7 @@ nexusai/
 └── README.md
 ```
 
-## 📚 API Documentation
+## API Documentation
 
 ### REST API Endpoints
 
@@ -353,35 +428,48 @@ socket.on('chat:error', (data: { message: string }) => {})
 
 Visit `http://localhost:5001/api/docs` for interactive Swagger documentation.
 
-## 🔧 Development
+## Development
+
+### Root-Level Scripts
+
+```bash
+# Run frontend + backend concurrently (hot-reload)
+npm run dev
+
+# Build both
+npm run build
+
+# Install all dependencies
+npm run install:all
+
+# Docker Compose shortcuts
+npm run docker:up          # Start all services
+npm run docker:up:build    # Start with rebuild
+npm run docker:down        # Stop all services
+npm run docker:down:volumes # Stop and wipe volumes
+```
 
 ### Running Tests
 
 **Backend**
 ```bash
 cd backend
-
-# Unit tests
-npm run test
-
-# E2E tests
-npm run test:e2e
-
-# Test coverage
-npm run test:cov
+npm run test          # Unit tests
+npm run test:e2e      # E2E tests
+npm run test:cov      # Test coverage
 ```
 
 **Frontend**
 ```bash
 cd frontend
-
-# Run tests (Coming Soon)
 npm run test
 ```
 
 ### Database Management
 
 ```bash
+cd backend
+
 # Create migration
 npx prisma migrate dev --name description
 
@@ -393,6 +481,9 @@ npx prisma migrate reset
 
 # Open Prisma Studio
 npx prisma studio
+
+# Generate Prisma client
+npx prisma generate
 ```
 
 ### Code Quality
@@ -414,52 +505,54 @@ npm run format
 5. Wait for review and CI checks
 6. Merge to main
 
-## 🚢 Deployment
+## Deployment
 
-### Backend Deployment
+### Full Stack with Docker Compose
 
-**Docker**
+```bash
+# Clone and configure
+git clone https://github.com/yourusername/nexusai.git
+cd nexusai
+cp .env.example .env
+# Edit .env with production values
+
+# Install, build, and start
+npm run install:all
+cd backend && npx prisma generate && npm run build && cd ..
+cd frontend && npm run build && cd ..
+docker compose up -d
+```
+
+### Individual Service Deployment
+
+**Backend (Docker)**
 ```bash
 cd backend
-
-# Build image
 docker build -t nexusai-backend .
-
-# Run container
 docker run -p 5001:5001 \
   -e DATABASE_URL=postgresql://... \
+  -e REDIS_URL=redis://... \
   -e JWT_SECRET=... \
   nexusai-backend
 ```
 
-**Production Build**
-```bash
-npm run build
-npm run start:prod
-```
-
-### Frontend Deployment
-
-**Vercel** (Recommended)
+**Frontend (Vercel)**
 ```bash
 vercel deploy
 ```
 
-**Docker**
+**Frontend (Docker)**
 ```bash
 cd frontend
-
-# Build image
 docker build -t nexusai-frontend .
-
-# Run container
 docker run -p 3000:3000 nexusai-frontend
 ```
 
-### Environment Checklist
+### Deployment Checklist
 
+- [ ] Environment variables configured in `.env`
 - [ ] Database migrations applied
-- [ ] Environment variables configured
+- [ ] Redis connection tested
 - [ ] SSL certificates installed
 - [ ] CORS origins whitelisted
 - [ ] Rate limiting configured
@@ -467,7 +560,7 @@ docker run -p 3000:3000 nexusai-frontend
 - [ ] Health check endpoints working
 - [ ] API keys for AI providers added
 
-## 🤝 Contributing
+## Contributing
 
 We welcome contributions! Please follow these steps:
 
@@ -489,31 +582,33 @@ We follow [Conventional Commits](https://www.conventionalcommits.org/):
 - `test:` - Adding or updating tests
 - `chore:` - Maintenance tasks
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - [Next.js](https://nextjs.org/) - React framework
 - [NestJS](https://nestjs.com/) - Node.js framework
 - [Prisma](https://www.prisma.io/) - Database ORM
 - [Material-UI](https://mui.com/) - React UI library
 - [Socket.IO](https://socket.io/) - Real-time communication
+- [Docker](https://www.docker.com/) - Containerization
 
-## 📞 Support
+## Support
 
 - **Documentation**: [Coming Soon]
 - **Issues**: [GitHub Issues](https://github.com/yourusername/nexusai/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/yourusername/nexusai/discussions)
-- **Email**: support@nexusai.com
 
-## 🗺 Roadmap
+## Roadmap
 
 - [x] User authentication and authorization
 - [x] Multi-model chat interface
 - [x] Agent builder with visual editor
 - [x] Real-time streaming responses
+- [x] Docker Compose for full-stack deployment
+- [x] Single-command development setup
 - [ ] Redis caching layer
 - [ ] AWS S3 file storage
 - [ ] Pinecone vector database
@@ -527,6 +622,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-**Built with ❤️ by the NexusAI Team**
+**Built by the NexusAI Team**
 
 *Last Updated: April 2026*

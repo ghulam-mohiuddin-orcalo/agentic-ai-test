@@ -1,5 +1,10 @@
+'use client';
+
 import { Box, Container, Typography } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 import HeroSearchCard from '@/components/hero/HeroSearchCard';
+import SuggestedQuestionsPanel from '@/components/hero/SuggestedQuestionsPanel';
+import AgentPanel from '@/components/hero/AgentPanel';
 import StatsBar from '@/components/hero/StatsBar';
 import FeaturedModels from '@/components/landing/FeaturedModels';
 import BuiltForBuilders from '@/components/landing/BuiltForBuilders';
@@ -11,6 +16,8 @@ import UseCases from '@/components/landing/UseCases';
 import NewsletterCTA from '@/components/landing/NewsletterCTA';
 
 export default function HomePage() {
+  const { t } = useTranslation();
+
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
       {/* Hero Section */}
@@ -31,10 +38,10 @@ export default function HomePage() {
                 color: 'text.primary',
               }}
             >
-              Find your perfect AI model
+              {t('home.hero.title')}
               <br />
               <Box component="span" sx={{ color: 'primary.main' }}>
-                with guided discovery
+                {t('home.hero.subtitle')}
               </Box>
             </Typography>
             <Typography
@@ -45,13 +52,19 @@ export default function HomePage() {
                 mb: 4,
               }}
             >
-              Browse 525+ models from top AI labs. Compare, test, and deploy in minutes.
+              {t('home.hero.description')}
             </Typography>
           </Box>
 
           {/* Hero Search Card */}
           <Box sx={{ maxWidth: 820, mx: 'auto', mb: 4 }}>
             <HeroSearchCard />
+          </Box>
+
+          {/* Suggested Questions & Agent Panel */}
+          <Box sx={{ maxWidth: 720, mx: 'auto', mb: 4 }}>
+            <SuggestedQuestionsPanel />
+            <AgentPanel />
           </Box>
 
           {/* Stats Bar */}

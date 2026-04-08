@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   Box,
   Typography,
@@ -8,47 +8,48 @@ import {
   InputAdornment,
   List,
   ListItemButton,
-  Chip,
   Divider,
+  Skeleton,
 } from '@mui/material';
-import { Search } from '@mui/icons-material';
+import { Search, ErrorOutline } from '@mui/icons-material';
+import { useTranslation } from 'react-i18next';
+import { useGetModelsQuery, PROVIDER_COLORS } from '@/store/api/modelsApi';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { setSelectedModel } from '@/store/slices/chatSlice';
 
-const MODELS = [
-  { id: 'gpt-5', name: 'GPT-5', provider: 'OpenAI', badge: null },
-  { id: 'gpt-5.2', name: 'GPT-5.2', provider: 'OpenAI', badge: null },
-  { id: 'gpt-5-turbo', name: 'GPT-5 Turbo', provider: 'OpenAI', badge: null },
-  { id: 'gpt-4.5', name: 'GPT-4.5', provider: 'OpenAI', badge: null },
-  { id: 'gpt-4.1', name: 'GPT-4.1', provider: 'OpenAI', badge: null },
-  { id: 'gpt-4.1-mini', name: 'GPT-4.1-mini', provider: 'OpenAI', badge: null },
-  { id: 'gpt-4o', name: 'GPT-4o', provider: 'OpenAI', badge: null },
-  { id: 'gpt-4o-mini', name: 'GPT-4o-mini', provider: 'OpenAI', badge: null },
-  { id: 'o3', name: 'o3', provider: 'OpenAI', badge: null },
-  { id: 'd3-mini', name: 'd3-mini', provider: 'OpenAI', badge: null },
-  { id: 'o4-mini', name: 'o4-mini', provider: 'OpenAI', badge: null },
-  { id: 'claude-opus-4-6', name: 'Claude Opus 4.6', provider: 'Anthropic', badge: null },
-  { id: 'claude-sonnet-4-5', name: 'Claude Sonnet 4.5', provider: 'Anthropic', badge: null },
-  { id: 'claude-opus-4', name: 'Claude Opus 4', provider: 'Anthropic', badge: null },
-  { id: 'claude-sonnet-4-6', name: 'Claude Sonnet 4.6', provider: 'Anthropic', badge: null },
-  { id: 'claude-sonnet-4-5-b', name: 'Claude Sonnet 4.5', provider: 'Anthropic', badge: null },
-];
+export default function ModelsSidebar() {
+  const dispatch = useAppDispatch();
+  const { t } = useTranslation();
+  const selectedModel = useAppSelector((state) => state.chat.selectedModel);
+  const { data: models, isLoading, isError, refetch } = useGetModelsQuery();
 
-const PROVIDER_COLORS: Record<string, string> = {
-  OpenAI: '#10A37F',
-  Anthropic: '#C8622A',
-  Google: '#1E4DA8',
-};
-
-interface ModelsSidebarProps {
-  selectedModel: string;
-  onSelectModel: (id: string) => void;
-}
-
-export default function ModelsSidebar({ selectedModel, onSelectModel }: ModelsSidebarProps) {
   const [search, setSearch] = useState('');
 
-  const filtered = MODELS.filter((m) =>
-    m.name.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = useMemo(() => {
+    if (!models) return [];
+    const query = search.toLowerCase();
+    return models.filter(
+      (m) =>
+        m.name.toLowerCase().includes(query) ||
+        m.provider.toLowerCase().includes(query)
+    );
+  }, [models, search]);
+
+  // Group filtered models by provider
+  const grouped = useMemo(() => {
+    const groups: Record<string, typeof filtered> = {};
+    for (const model of filtered) {
+      if (!groups[model.provider]) {
+        groups[model.provider] = [];
+      }
+      groups[model.provider].push(model);
+    }
+    return groups;
+  }, [filtered]);
+
+  const handleSelectModel = (id: string) => {
+    dispatch(setSelectedModel(id));
+  };
 
   return (
     <Box
@@ -76,11 +77,11 @@ export default function ModelsSidebar({ selectedModel, onSelectModel }: ModelsSi
             mb: 1.5,
           }}
         >
-          MODELS
+          {t('chat.modelsSidebar.title')}
         </Typography>
         <TextField
           size="small"
-          placeholder="Search 325 models..."
+          placeholder={t('chat.modelsSidebar.searchPlaceholder', { count: models?.length ?? '...' })}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           fullWidth
@@ -111,59 +112,134 @@ export default function ModelsSidebar({ selectedModel, onSelectModel }: ModelsSi
 
       <Divider sx={{ borderColor: 'var(--border)' }} />
 
-      {/* Model List */}
-      <List sx={{ flex: 1, overflow: 'auto', py: 0.5, px: 0.5 }}>
-        {filtered.map((model) => {
-          const isSelected = selectedModel === model.id;
-          const providerColor = PROVIDER_COLORS[model.provider] ?? '#9E9B93';
+      {/* Loading state */}
+      {isLoading && (
+        <Box sx={{ px: 2, py: 2, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Skeleton variant="circular" width={20} height={20} />
+              <Skeleton variant="text" width={120} height={20} />
+            </Box>
+          ))}
+        </Box>
+      )}
 
-          return (
-            <ListItemButton
-              key={model.id}
-              selected={isSelected}
-              onClick={() => onSelectModel(model.id)}
-              sx={{
-                borderRadius: '8px',
-                px: 1.5,
-                py: 0.875,
-                mb: 0.25,
-                '&.Mui-selected': {
-                  bgcolor: 'var(--accent-lt)',
-                  '&:hover': { bgcolor: 'var(--accent-lt)' },
-                },
-                '&:hover': { bgcolor: 'var(--bg)' },
-              }}
-            >
-              <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
-                <Typography
+      {/* Error state */}
+      {isError && !isLoading && (
+        <Box sx={{ px: 2, py: 3, textAlign: 'center' }}>
+          <ErrorOutline sx={{ fontSize: 28, color: 'var(--text3)', mb: 1 }} />
+          <Typography sx={{ fontSize: '0.8125rem', color: 'var(--text3)', mb: 1 }}>
+            {t('chat.modelsSidebar.failedToLoad')}
+          </Typography>
+          <Typography
+            onClick={() => refetch()}
+            sx={{
+              fontSize: '0.75rem',
+              color: 'var(--accent)',
+              cursor: 'pointer',
+              fontWeight: 600,
+              '&:hover': { textDecoration: 'underline' },
+            }}
+          >
+            {t('common.retry')}
+          </Typography>
+        </Box>
+      )}
+
+      {/* Grouped Model List */}
+      {!isLoading && !isError && (
+        <Box sx={{ flex: 1, overflow: 'auto', py: 0.5, px: 0.5 }}>
+          {Object.entries(grouped).map(([provider, providerModels]) => {
+            const providerColor = PROVIDER_COLORS[provider] ?? '#9E9B93';
+
+            return (
+              <Box key={provider} sx={{ mb: 0.5 }}>
+                {/* Provider group header */}
+                <Box
                   sx={{
-                    fontSize: '0.8125rem',
-                    fontWeight: isSelected ? 600 : 500,
-                    color: isSelected ? 'var(--accent)' : 'var(--text)',
-                    lineHeight: 1.3,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 0.75,
+                    px: 1.5,
+                    pt: 1.25,
+                    pb: 0.5,
                   }}
                 >
-                  {model.name}
-                </Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.25 }}>
                   <Box
                     sx={{
-                      width: 5,
-                      height: 5,
+                      width: 6,
+                      height: 6,
                       borderRadius: '50%',
                       bgcolor: providerColor,
                       flexShrink: 0,
                     }}
                   />
-                  <Typography sx={{ fontSize: '0.6875rem', color: 'var(--text3)', lineHeight: 1 }}>
-                    {model.provider}
+                  <Typography
+                    sx={{
+                      fontSize: '0.6875rem',
+                      fontWeight: 700,
+                      color: 'var(--text3)',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.06em',
+                    }}
+                  >
+                    {provider}
                   </Typography>
                 </Box>
+
+                <List sx={{ py: 0 }}>
+                  {providerModels.map((model) => {
+                    const isSelected = selectedModel === model.id;
+
+                    return (
+                      <ListItemButton
+                        key={model.id}
+                        selected={isSelected}
+                        onClick={() => handleSelectModel(model.id)}
+                        sx={{
+                          borderRadius: '8px',
+                          px: 1.5,
+                          py: 0.75,
+                          mb: 0.25,
+                          '&.Mui-selected': {
+                            bgcolor: 'var(--accent-lt)',
+                            '&:hover': { bgcolor: 'var(--accent-lt)' },
+                          },
+                          '&:hover': { bgcolor: 'var(--bg)' },
+                        }}
+                      >
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
+                          <Typography sx={{ fontSize: '0.875rem', lineHeight: 1 }}>
+                            {model.icon}
+                          </Typography>
+                          <Typography
+                            sx={{
+                              fontSize: '0.8125rem',
+                              fontWeight: isSelected ? 600 : 500,
+                              color: isSelected ? 'var(--accent)' : 'var(--text)',
+                              lineHeight: 1.3,
+                            }}
+                          >
+                            {model.name}
+                          </Typography>
+                        </Box>
+                      </ListItemButton>
+                    );
+                  })}
+                </List>
               </Box>
-            </ListItemButton>
-          );
-        })}
-      </List>
+            );
+          })}
+
+          {Object.keys(grouped).length === 0 && (
+            <Box sx={{ px: 2, py: 3, textAlign: 'center' }}>
+              <Typography sx={{ fontSize: '0.8125rem', color: 'var(--text3)' }}>
+                {t('chat.modelsSidebar.noModels')}
+              </Typography>
+            </Box>
+          )}
+        </Box>
+      )}
     </Box>
   );
 }

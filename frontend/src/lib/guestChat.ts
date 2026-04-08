@@ -1,8 +1,11 @@
+import type { AttachedFile } from '@/store/slices/chatSlice';
+
 export interface GuestMessage {
   id: string;
   role: 'user' | 'assistant' | 'system';
   content: string;
   timestamp: string;
+  attachment?: AttachedFile;
 }
 
 export interface GuestConversation {
@@ -66,7 +69,8 @@ export class GuestChatStorage {
   static addMessage(
     conversationId: string,
     role: 'user' | 'assistant',
-    content: string
+    content: string,
+    attachment?: AttachedFile
   ): GuestMessage {
     const conversations = this.getConversations();
     const conversation = conversations.find(conv => conv.id === conversationId);
@@ -80,6 +84,7 @@ export class GuestChatStorage {
       role,
       content,
       timestamp: new Date().toISOString(),
+      attachment,
     };
 
     conversation.messages.push(message);

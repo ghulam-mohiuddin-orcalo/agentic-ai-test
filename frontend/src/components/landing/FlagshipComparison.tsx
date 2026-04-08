@@ -4,6 +4,7 @@ import { Box, Typography, Button } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import { useTranslation } from 'react-i18next';
 import { FLAGSHIP_MODELS } from '@/lib/constants';
 
 const BADGE_STYLES: Record<string, { bg: string; color: string }> = {
@@ -13,15 +14,17 @@ const BADGE_STYLES: Record<string, { bg: string; color: string }> = {
 };
 
 export default function FlagshipComparison() {
+  const { t } = useTranslation();
+
   return (
     <Box>
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
         <Box>
           <Typography variant="h2" sx={{ fontSize: '1.5rem', mb: 0.5 }}>
-            Flagship Model Comparison
+            {t('landing.flagship.title')}
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Side-by-side comparison of top models across key metrics
+            {t('landing.flagship.subtitle')}
           </Typography>
         </Box>
         <Button
@@ -29,7 +32,7 @@ export default function FlagshipComparison() {
           sx={{ color: 'primary.main', fontWeight: 500, fontSize: '0.875rem', '&:hover': { bgcolor: 'primary.light' } }}
           href="/marketplace"
         >
-          Compare all
+          {t('landing.flagship.compareAll')}
         </Button>
       </Box>
 
@@ -55,7 +58,14 @@ export default function FlagshipComparison() {
             borderColor: 'divider',
           }}
         >
-          {['Model', 'Context', 'Price /1M tk', 'Speed', 'Multimodal', 'Reasoning'].map((h) => (
+          {[
+            t('landing.flagship.model'),
+            t('landing.flagship.context'),
+            t('landing.flagship.price'),
+            t('landing.flagship.speed'),
+            t('landing.flagship.multimodal'),
+            t('landing.flagship.reasoning'),
+          ].map((h) => (
             <Typography key={h} variant="caption" fontWeight={600} color="text.secondary" sx={{ fontSize: '0.75rem' }}>
               {h}
             </Typography>
@@ -115,7 +125,7 @@ export default function FlagshipComparison() {
                         lineHeight: 1.6,
                       }}
                     >
-                      {model.badge === 'hot' ? '🔥 Hot' : model.badge === 'new' ? '✨ New' : '🌐 Open'}
+                      {model.badge === 'hot' ? `\uD83D\uDD25 ${t('landing.badges.hot')}` : model.badge === 'new' ? `\u2728 ${t('landing.badges.new')}` : `\uD83C\uDF10 ${t('landing.badges.open')}`}
                     </Box>
                   )}
                 </Box>

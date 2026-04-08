@@ -14,7 +14,7 @@ const initialState: UIState = {
   rightPanelOpen: true,
   currentModal: null,
   modalData: null,
-  language: 'EN',
+  language: 'en',
   theme: 'light',
 };
 
@@ -61,5 +61,4 @@ export const {
   setLanguage,
   setTheme,
 } = uiSlice.actions;
-
 export default uiSlice.reducer;

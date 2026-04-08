@@ -80,19 +80,86 @@ export const mockMessages: Record<string, Message[]> = {
   ],
 };
 
+// Context-aware mock response generator
+function getMockResponse(prompt: string): string {
+  const lower = prompt.toLowerCase();
+
+  // Video-related prompts
+  const videoMatch = prompt.match(/(?:this video|video:)\s*"?([^"?"]+)"?\??/i);
+  if (videoMatch || (lower.includes('video') && lower.includes('analyz'))) {
+    const fileName = videoMatch?.[1]?.trim() || 'your video';
+    return `Here are the best AI tools for analyzing **"${fileName}"**:\n\n1. **Gemini 3.1 Pro** - Industry-leading video understanding with frame-by-frame analysis and 2M token context\n2. **GPT-5 Vision** - Excellent at describing video content, detecting scenes, and extracting key moments\n3. **Claude Opus 4.6** - Strong at understanding video transcripts and generating detailed summaries\n\n**What I can do with your video:**\n- Generate a scene-by-scene summary\n- Extract and transcribe spoken audio\n- Identify key moments and highlights\n- Detect objects, people, and actions\n- Create timestamps and chapters\n- Generate captions and subtitles\n\nWould you like me to start analyzing your video?`;
+  }
+
+  // Image-related prompts
+  const imageMatch = prompt.match(/(?:this image|image:)\s*"?([^"?"]+)"?\??/i);
+  if (imageMatch || (lower.includes('image') && lower.includes('tool'))) {
+    const fileName = imageMatch?.[1]?.trim() || 'your image';
+    return `Great question! Here are the best AI tools for working with **"${fileName}"**:\n\n1. **GPT-5 Vision** - Analyze, describe, and extract text from images with high accuracy\n2. **Claude Opus 4.6** - Excellent at understanding complex visuals, charts, and diagrams\n3. **Gemini 3.1 Pro** - Strong multimodal capabilities for image understanding and generation\n\n**What I can do with your image:**\n- Describe and analyze the content\n- Extract text (OCR)\n- Identify objects, colors, and layouts\n- Generate alt text for accessibility\n- Compare with other images\n\nWould you like me to analyze your image now?`;
+  }
+
+  // File-related prompts
+  const fileMatch = prompt.match(/(?:for my file|file:)\s*"?([^"?"]+)"?\??/i);
+  if (fileMatch || (lower.includes('file') && lower.includes('help'))) {
+    const fileName = fileMatch?.[1]?.trim() || 'your file';
+    const ext = fileName.split('.').pop()?.toLowerCase() || '';
+
+    const toolsByType: Record<string, string> = {
+      pdf: "For your PDF file, I recommend:\n\n1. **Claude Opus 4.6** - Best for long document analysis with 200K context\n2. **Gemini 3.1 Pro** - Handles up to 2M tokens, ideal for very large PDFs\n3. **GPT-5** - Great for summarization and extraction\n\n**Suggested workflow:**\n- Upload your PDF and ask for a summary\n- Extract key data points or tables\n- Generate action items or insights",
+      docx: "For your Word document, here are the best AI tools:\n\n1. **Claude Opus 4.6** - Excellent at understanding document structure, headings, and formatting\n2. **GPT-5** - Strong at rewriting, editing, and improving content\n3. **Gemini 3.1 Pro** - Great for cross-referencing with other documents\n\n**What I can help with:**\n- Summarize the document\n- Rewrite or improve sections\n- Extract key information\n- Convert to different formats",
+      csv: "For your CSV data file, I recommend:\n\n1. **GPT-5** - Excellent at data analysis and generating Python/pandas code\n2. **Claude Opus 4.6** - Great at interpreting data patterns and writing reports\n3. **Gemini 3.1 Pro** - Handles large datasets with its 2M token context\n\n**What I can do:**\n- Analyze trends and patterns\n- Generate charts and visualizations\n- Clean and transform the data\n- Write SQL queries",
+    };
+
+    const fallback = `I can help you work with **"${fileName}"**! Here are the best AI tools for your file:\n\n1. **Claude Opus 4.6** - Deep document understanding and analysis\n2. **GPT-5** - Versatile file processing and content generation\n3. **Gemini 3.1 Pro** - Large context for big files\n\nWould you like me to analyze, summarize, or extract specific information from your file?`;
+
+    return toolsByType[ext] || fallback;
+  }
+
+  if (lower.includes('hello') || lower.includes('hi') || lower.includes('hey') || lower.includes('say hi')) {
+    return "Hello! Welcome to NexusAI. I'm your AI assistant, ready to help you explore AI models, write code, analyze data, or just chat. What would you like to do today?";
+  }
+
+  if (lower.includes('best') && lower.includes('model') && lower.includes('cod')) {
+    return "For coding tasks, here are the top models on NexusAI:\n\n1. **Claude Opus 4.6** - Excellent at complex code generation, debugging, and architecture design. Best for large codebases.\n2. **GPT-5** - Strong all-rounder with great code completion and explanation abilities.\n3. **Gemini 3.1 Pro** - Excels at multi-file understanding with its 2M token context window.\n\nWould you like me to compare any of these in detail?";
+  }
+
+  if (lower.includes('compare') && (lower.includes('gpt') || lower.includes('claude') || lower.includes('gemini'))) {
+    return "Here's a quick comparison:\n\n| Feature | GPT-5 | Claude Opus 4.6 | Gemini 3.1 Pro |\n|---------|-------|-----------------|----------------|\n| Context Window | 256K | 200K | 2M |\n| Code Quality | Excellent | Excellent | Very Good |\n| Speed | Fast | Medium | Fast |\n| Pricing | $15/1M tokens | $15/1M tokens | $7/1M tokens |\n| Vision | Yes | Yes | Yes |\n\nEach has strengths depending on your use case. What's your primary need?";
+  }
+
+  if (lower.includes('write') && lower.includes('code')) {
+    return "I'd be happy to help you write code! To give you the best assistance, could you tell me:\n\n1. **What language** are you working with? (Python, JavaScript, TypeScript, etc.)\n2. **What you're building** - a function, API, component, or something else?\n3. **Any specific requirements** or constraints?\n\nJust describe what you need and I'll generate the code for you.";
+  }
+
+  if (lower.includes('agent')) {
+    return "NexusAI Agents are powerful AI assistants you can customize for specific tasks. Here's how to get started:\n\n1. **Choose a template** - Code Assistant, Content Writer, Data Analyst, or Research Agent\n2. **Configure the model** - Select which AI model powers your agent\n3. **Set the system prompt** - Define your agent's personality and capabilities\n4. **Add tools** - Enable web search, code execution, file operations, etc.\n5. **Deploy** - Get an API endpoint for your agent\n\nWould you like to create an agent now?";
+  }
+
+  if (lower.includes('free') && lower.includes('model')) {
+    return "Great question! Here are the best free models available on NexusAI:\n\n- **Llama 4 Maverick** - Meta's open-source model, great for general tasks\n- **Gemma 3** - Google's lightweight model, fast and efficient\n- **Mistral Small** - Excellent for European languages\n\nThese are free to use with generous rate limits. For heavier workloads, our Budget tier starts at just $0.10/1M tokens.";
+  }
+
+  if (lower.includes('image') || lower.includes('generate') || lower.includes('create')) {
+    return "I can help with creative tasks! Here's what's available:\n\n- **Text Generation** - Articles, stories, marketing copy\n- **Code Generation** - Full functions, components, APIs\n- **Data Analysis** - Interpret datasets, generate insights\n- **Summarization** - Condense long documents\n\nNote: Image generation is coming soon to NexusAI! For now, I can help describe or plan visual content. What would you like to create?";
+  }
+
+  if (lower.includes('analys') || lower.includes('data')) {
+    return "I can help you analyze data! Here's what I can do:\n\n1. **Interpret datasets** - Upload a CSV or describe your data\n2. **Statistical analysis** - Mean, median, correlations, trends\n3. **Visualization suggestions** - Recommend the best chart types\n4. **Generate code** - Python/pandas scripts for data processing\n\nWhat kind of data are you working with?";
+  }
+
+  // Default contextual response
+  return `That's a great question! Let me help you with that.\n\nBased on your query about "${prompt.slice(0, 80)}${prompt.length > 80 ? '...' : ''}", here are some thoughts:\n\n1. NexusAI provides access to 525+ AI models from 28 labs, so there's likely a perfect model for your needs.\n2. You can test different models side-by-side to find the best fit.\n3. Our agent builder lets you create custom AI workflows.\n\nWould you like me to go deeper into any of these areas, or is there something specific I can help you with?`;
+}
+
 // Mock streaming response generator
 export async function* mockStreamResponse(prompt: string): AsyncGenerator<string> {
-  const responses = [
-    "I'm a mock AI assistant. ",
-    "This is a simulated streaming response. ",
-    "In production, this would connect to a real AI model. ",
-    "You can use this for testing the UI without a backend. ",
-    "\n\nYour question was: \"" + prompt + "\"",
-  ];
+  const response = getMockResponse(prompt);
 
-  for (const chunk of responses) {
-    await new Promise(resolve => setTimeout(resolve, 100));
-    yield chunk;
+  // Stream word-by-word for realistic effect
+  const words = response.split(' ');
+  for (let i = 0; i < words.length; i++) {
+    await new Promise(resolve => setTimeout(resolve, 20 + Math.random() * 30));
+    yield words[i] + (i < words.length - 1 ? ' ' : '');
   }
 }
 

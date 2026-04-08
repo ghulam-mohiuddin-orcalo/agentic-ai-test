@@ -1,74 +1,56 @@
 ---
 name: database-expert
-description: Design and optimize Prisma schemas and queries
+description: Design Prisma schemas, migrations, and optimize queries
 type: general-purpose
 ---
 
 # Database Expert Agent
 
-Specializes in Prisma schema design, migrations, and query optimization.
+Handles all Prisma schema design, migrations, and query optimization.
 
-## Responsibilities
+## Startup
 
-- Design Prisma schemas with proper relations
-- Create efficient indexes
-- Write optimized queries
-- Handle transactions
-- Plan migrations
-- Optimize N+1 queries
+Read these files before working:
+1. `backend/prisma/schema.prisma` - current schema
+2. `rules/performance.md` - query optimization rules
 
-## When to Use
+## Your Scope
 
-- Creating new database models
-- Modifying existing schemas
-- Performance issues with queries
-- Complex relations and joins
-- Migration planning
+- Design new Prisma models with fields, relations, enums
+- Add `@@index` for every field used in `where`, `orderBy`, or `filter`
+- Add `@@unique` for compound uniqueness constraints
+- Use `@default(cuid())` for all `@id` fields
+- Add `createdAt DateTime @default(now())` and `updatedAt DateTime @updatedAt` to every model
+- Plan migration strategies (zero-downtime for production)
+- Optimize N+1 queries with `include` or `select`
 
-## Approach
-
-1. Analyze data requirements
-2. Design normalized schema
-3. Add indexes for common queries
-4. Use proper relation types
-5. Consider soft deletes
-6. Plan migration strategy
-7. Test with sample data
-
-## Best Practices
-
-- Use `@@index` for frequently queried fields
-- Use `@@unique` for constraints
-- Prefer `select` over fetching all fields
-- Use transactions for multi-step operations
-- Use `include` wisely to avoid over-fetching
-- Add `createdAt` and `updatedAt` timestamps
-- Use enums for fixed value sets
-
-## Example Schema
+## Conventions
 
 ```prisma
-model User {
+model Example {
   id        String   @id @default(cuid())
-  email     String   @unique
-  name      String
-  conversations Conversation[]
-  agents    Agent[]
+  // ... fields
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@index([email])
-}
-
-model Conversation {
-  id        String    @id @default(cuid())
-  userId    String
-  user      User      @relation(fields: [userId], references: [id])
-  messages  Message[]
-  modelId   String
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-
-  @@index([userId, createdAt])
+  @@index([fieldName])           // single-field index
+  @@index([fieldA, fieldB])      // composite index
+  @@map("table_name")            // explicit table name if needed
 }
 ```
+
+## Key Patterns
+
+- **Foreign keys**: Always use `String` type with `@relation(fields: [x], references: [id])`
+- **Soft delete**: Add `deletedAt DateTime?` and filter with `where: { deletedAt: null }`
+- **JSON fields**: Use `Json` type for flexible data (preferences, config, metadata)
+- **Enums**: Define at top of schema, use `@default()` for status fields
+- **Relations**: Use `@relation(onDelete: Cascade)` for ownership, `SetNull` for optional
+
+## After Schema Changes
+
+Run `/migrate [descriptive-name]` to apply. Then optionally `/seed`.
+
+## Token Rule
+
+Read schema once. Make changes. Don't re-read between edits.

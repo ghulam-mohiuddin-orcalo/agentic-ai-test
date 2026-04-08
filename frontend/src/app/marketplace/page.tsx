@@ -25,6 +25,31 @@ import MarketplaceModelCard from '@/components/marketplace/MarketplaceModelCard'
 import { MARKETPLACE_MODELS } from '@/lib/marketplaceData';
 import { AI_LABS } from '@/lib/constants';
 import type { ModelData } from '@/components/models/ModelCard';
+import { useTranslation } from 'react-i18next';
+
+const LAB_DESCRIPTIONS: Record<string, string> = {
+  openai: 'Pioneering AI research lab behind GPT-5, o3, and DALL-E. Known for state-of-the-art language models.',
+  anthropic: 'AI safety company building reliable, interpretable systems. Creators of the Claude model family.',
+  google: 'Google DeepMind builds frontier AI models including Gemini, with deep multimodal and reasoning capabilities.',
+  meta: 'Meta AI develops open-source models like Llama, advancing accessible AI for the research community.',
+  deepseek: 'Chinese AI lab focused on cost-efficient frontier models with strong math and coding performance.',
+  mistral: 'European AI lab building efficient, multilingual models with strong reasoning and function calling.',
+  xai: 'Elon Musk-founded lab building Grok models with real-time data access and deep reasoning.',
+  cohere: 'Enterprise-focused AI building RAG-specialized models with built-in grounding and citations.',
+  qwen: 'Alibaba Cloud AI developing multilingual open-source models with strong code and math capabilities.',
+  nvidia: 'GPU leader now building AI models. Nemotron series excels at inference efficiency.',
+  microsoft: 'Building compact, efficient models like Phi that punch above their weight class.',
+  amazon: 'Amazon Bedrock provides managed access to frontier models plus proprietary Nova and Titan series.',
+  stability: 'Open-source generative AI lab known for Stable Diffusion and image generation models.',
+  perplexity: 'AI-powered search company building models optimized for real-time information retrieval.',
+  together: 'Open-source AI infrastructure company hosting and fine-tuning community models at scale.',
+  moonshot: 'Chinese AI startup behind Kimi models, known for long-context and agent swarm orchestration.',
+  zhipu: 'Chinese AI lab developing the GLM model family with strong multilingual capabilities.',
+  baidu: 'Chinese tech giant building ERNIE models for enterprise and multilingual applications.',
+  ai21: 'Israeli AI lab creating Jamba models with hybrid Mamba-Transformer architecture.',
+  inflection: 'Building emotionally intelligent AI assistants with natural conversation abilities.',
+  allenai: 'Non-profit AI research institute creating open-source models like OLMo for scientific progress.',
+};
 
 const SORT_OPTIONS = [
   { value: 'rating', label: 'Top Rated' },
@@ -76,6 +101,7 @@ export default function MarketplacePage() {
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
   const [gridView, setGridView] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const { t } = useTranslation();
 
   const filtered = useMemo(() => {
     let result = MARKETPLACE_MODELS;
@@ -149,10 +175,10 @@ export default function MarketplacePage() {
                 mb: 0.375,
               }}
             >
-              Model Marketplace
+              {t('marketplace.title')}
             </Typography>
             <Typography sx={{ fontSize: '0.875rem', color: 'var(--text2)' }}>
-              {MARKETPLACE_MODELS.length}+ models from leading AI labs
+              {t('marketplace.modelCount', { count: MARKETPLACE_MODELS.length })}
             </Typography>
           </Box>
 
@@ -161,7 +187,7 @@ export default function MarketplacePage() {
             <TextField
               fullWidth
               size="small"
-              placeholder="Search models, capabilities, labs..."
+              placeholder={t('marketplace.searchPlaceholder')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               InputProps={{
@@ -197,7 +223,7 @@ export default function MarketplacePage() {
           }}
         >
           <Chip
-            label="All Labs"
+            label={t('marketplace.allLabs')}
             size="small"
             onClick={() => setSelectedLab('')}
             sx={{
@@ -214,7 +240,7 @@ export default function MarketplacePage() {
               '&:hover': { bgcolor: selectedLab === '' ? 'var(--accent2)' : 'var(--bg2)' },
             }}
           />
-          {AI_LABS.slice(0, 14).map((lab) => (
+          {AI_LABS.map((lab) => (
             <Chip
               key={lab.id}
               label={lab.name}
@@ -237,6 +263,72 @@ export default function MarketplacePage() {
           ))}
         </Box>
       </Box>
+
+      {/* Selected lab banner */}
+      {selectedLab && (() => {
+        const lab = AI_LABS.find((l) => l.id === selectedLab);
+        const labModelCount = MARKETPLACE_MODELS.filter((m) => m.lab === selectedLab).length;
+        if (!lab) return null;
+        return (
+          <Box
+            sx={{
+              px: { xs: 2, md: 4 },
+              py: 1.5,
+              bgcolor: 'var(--card)',
+              borderBottom: '1px solid var(--border)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1.5,
+            }}
+          >
+            <Box
+              sx={{
+                width: 36,
+                height: 36,
+                borderRadius: '10px',
+                bgcolor: `${lab.color}18`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '1.125rem',
+                flexShrink: 0,
+              }}
+            >
+              {lab.icon}
+            </Box>
+            <Box sx={{ minWidth: 0 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Typography
+                  sx={{
+                    fontFamily: "'Syne', sans-serif",
+                    fontWeight: 700,
+                    fontSize: '0.9375rem',
+                    color: 'var(--text)',
+                  }}
+                >
+                  {lab.name}
+                </Typography>
+                <Typography
+                  sx={{
+                    fontSize: '0.75rem',
+                    color: 'var(--text3)',
+                    bgcolor: 'var(--bg)',
+                    px: 1,
+                    py: 0.125,
+                    borderRadius: '2rem',
+                    border: '1px solid var(--border)',
+                  }}
+                >
+                  {t('marketplace.modelCount_' + (labModelCount === 1 ? 'singular' : 'plural'), { count: labModelCount })}
+                </Typography>
+              </Box>
+              <Typography sx={{ fontSize: '0.8125rem', color: 'var(--text2)', lineHeight: 1.4 }}>
+                {LAB_DESCRIPTIONS[selectedLab] ?? t('marketplace.exploreLab', { lab: lab.name })}
+              </Typography>
+            </Box>
+          </Box>
+        );
+      })()}
 
       {/* Body: sidebar + content */}
       <Box sx={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0 }}>
@@ -263,7 +355,7 @@ export default function MarketplacePage() {
           >
             {/* Left: toggle sidebar + capability chips */}
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-              <Tooltip title={sidebarOpen ? 'Hide filters' : 'Show filters'}>
+              <Tooltip title={sidebarOpen ? t('marketplace.hideFilters') : t('marketplace.showFilters')}>
                 <Button
                   size="small"
                   startIcon={<TuneRounded sx={{ fontSize: 16 }} />}
@@ -280,7 +372,7 @@ export default function MarketplacePage() {
                     '&:hover': { bgcolor: 'var(--bg2)' },
                   }}
                 >
-                  Filters{activeFiltersCount > 0 ? ` (${activeFiltersCount})` : ''}
+                  {t('marketplace.filters')}{activeFiltersCount > 0 ? ` (${activeFiltersCount})` : ''}
                 </Button>
               </Tooltip>
 
@@ -308,7 +400,7 @@ export default function MarketplacePage() {
             {/* Right: sort + view toggle + count */}
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
               <Typography sx={{ fontSize: '0.8125rem', color: 'var(--text3)', whiteSpace: 'nowrap' }}>
-                {filtered.length} models
+                {t('marketplace.resultCount', { count: filtered.length })}
               </Typography>
               <FormControl size="small">
                 <Select
@@ -374,10 +466,10 @@ export default function MarketplacePage() {
               <Box sx={{ textAlign: 'center', py: 8 }}>
                 <Typography sx={{ fontSize: '2.5rem', mb: 1.5 }}>🔍</Typography>
                 <Typography sx={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text)', mb: 0.75 }}>
-                  No models match your filters
+                  {t('marketplace.noResults')}
                 </Typography>
                 <Typography sx={{ fontSize: '0.875rem', color: 'var(--text2)', mb: 2 }}>
-                  Try adjusting your search or filters
+                  {t('marketplace.noResultsHint')}
                 </Typography>
                 <Button
                   variant="outlined"
@@ -385,7 +477,7 @@ export default function MarketplacePage() {
                   onClick={() => { setSearch(''); setSelectedLab(''); setCapability(''); setFilters(DEFAULT_FILTERS); }}
                   sx={{ textTransform: 'none', borderRadius: '8px', borderColor: 'var(--border)', color: 'var(--text2)' }}
                 >
-                  Clear all filters
+                  {t('common.clearFilters')}
                 </Button>
               </Box>
             ) : (

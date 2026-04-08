@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { Suspense, useState, useCallback, useEffect, useRef } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Box, Alert, Button } from '@mui/material';
 import Link from 'next/link';
 import ModelsSidebar from '@/components/chat/ModelsSidebar';
@@ -9,10 +10,13 @@ import WelcomeScreen from '@/components/chat/WelcomeScreen';
 import ChatInput from '@/components/chat/ChatInput';
 import MessageThread from '@/components/chat/MessageThread';
 import { useAuth } from '@/hooks/useAuth';
+import { useTranslation } from 'react-i18next';
 import { GuestChatStorage } from '@/lib/guestChat';
+import { streamChatMessage } from '@/lib/chatApi';
+import { consumePendingVoiceMessage, peekPendingVoiceMessage } from '@/lib/pendingVoiceMessage';
 import { useCreateConversationMutation, useAddMessageMutation } from '@/store/api/chatApi';
-import { getSocket } from '@/lib/socket';
-import { mockStreamResponse } from '@/lib/mockData';
+import { useAppSelector, useAppDispatch } from '@/store/hooks';
+import { clearInitialPrompt, type AttachedFile } from '@/store/slices/chatSlice';
 
 interface Message {
   id: string;
@@ -20,101 +24,146 @@ interface Message {
   content: string;
   timestamp: Date;
   modelId?: string;
+  attachment?: AttachedFile;
 }
 
-export default function ChatPage() {
-  const { isAuthenticated, user } = useAuth();
-  const [selectedModel, setSelectedModel] = useState('gpt-4o');
+function ChatPageContent() {
+  const { isAuthenticated } = useAuth();
+  const { t } = useTranslation();
+  const dispatch = useAppDispatch();
+  const searchParams = useSearchParams();
+  const initialPrompt = useAppSelector((state) => state.chat.initialPrompt);
+  const attachedFile = useAppSelector((state) => state.chat.attachedFile);
+  const selectedModel = useAppSelector((state) => state.chat.selectedModel);
+
   const [messages, setMessages] = useState<Message[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingContent, setStreamingContent] = useState('');
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [createConversation] = useCreateConversationMutation();
   const [addMessage] = useAddMessageMutation();
+  const hasAutoSent = useRef(false);
+  const streamAbortRef = useRef<AbortController | null>(null);
+  const messagesRef = useRef<Message[]>([]);
 
   const hasMessages = messages.length > 0 || isStreaming;
 
-  // Load messages on mount
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
+
   useEffect(() => {
     if (!isAuthenticated) {
-      // Guest mode - load from sessionStorage
+      if (peekPendingVoiceMessage()) {
+        return;
+      }
+
       const guestConvId = GuestChatStorage.getCurrentConversationId();
       if (guestConvId) {
         const guestMessages = GuestChatStorage.getMessages(guestConvId);
         setMessages(
-          guestMessages.map((msg) => ({
-            id: msg.id,
-            role: msg.role,
-            content: msg.content,
-            timestamp: new Date(msg.timestamp),
-          }))
+          guestMessages
+            .filter((msg) => msg.role !== 'system')
+            .map((msg) => ({
+              id: msg.id,
+              role: msg.role as 'user' | 'assistant',
+              content: msg.content,
+              timestamp: new Date(msg.timestamp),
+              attachment: msg.attachment,
+            }))
         );
         setConversationId(guestConvId);
       }
     }
-    // For authenticated users, we'll load conversations from API in a future update
   }, [isAuthenticated]);
 
-  // Setup Socket.IO for authenticated users
-  useEffect(() => {
-    if (!isAuthenticated) return;
+  const streamViaApi = useCallback(
+    async (content: string, convId: string | null) => {
+      const abortController = new AbortController();
+      streamAbortRef.current = abortController;
 
-    const socket = getSocket();
-    socket.connect();
+      try {
+        const history = messagesRef.current.map((m) => ({ role: m.role, content: m.content }));
+        const stream = streamChatMessage({
+          message: content,
+          model: selectedModel,
+          conversationId: convId || undefined,
+          history,
+          signal: abortController.signal,
+        });
 
-    socket.on('chat:chunk', (data: { delta: string }) => {
-      setStreamingContent((prev) => prev + data.delta);
-    });
-
-    socket.on('chat:done', async () => {
-      const assistantMsg: Message = {
-        id: crypto.randomUUID(),
-        role: 'assistant',
-        content: streamingContent,
-        timestamp: new Date(),
-        modelId: selectedModel,
-      };
-
-      setMessages((prev) => [...prev, assistantMsg]);
-      setIsStreaming(false);
-
-      // Save to database
-      if (conversationId) {
-        try {
-          await addMessage({
-            conversationId,
-            role: 'assistant',
-            content: streamingContent,
-          });
-        } catch (error) {
-          console.error('Failed to save assistant message:', error);
+        let fullResponse = '';
+        for await (const chunk of stream) {
+          fullResponse += chunk;
+          setStreamingContent(fullResponse);
         }
+
+        if (!fullResponse.trim()) {
+          setIsStreaming(false);
+          setStreamingContent('');
+          streamAbortRef.current = null;
+          return;
+        }
+
+        const assistantMsg: Message = {
+          id: crypto.randomUUID(),
+          role: 'assistant',
+          content: fullResponse,
+          timestamp: new Date(),
+          modelId: selectedModel,
+        };
+
+        setMessages((prev) => [...prev, assistantMsg]);
+
+        if (convId) {
+          if (!isAuthenticated) {
+            GuestChatStorage.addMessage(convId, 'assistant', fullResponse);
+          } else {
+            try {
+              await addMessage({
+                conversationId: convId,
+                role: 'assistant',
+                content: fullResponse,
+              });
+            } catch (error) {
+              console.error('Failed to save assistant message:', error);
+            }
+          }
+        }
+
+        setIsStreaming(false);
+        setStreamingContent('');
+      } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') {
+          return;
+        }
+        console.error('Failed to stream response:', error);
+        setIsStreaming(false);
+        setStreamingContent('');
+      } finally {
+        streamAbortRef.current = null;
       }
-
-      setStreamingContent('');
-    });
-
-    socket.on('chat:error', (data: { message: string }) => {
-      console.error('Chat error:', data.message);
-      setIsStreaming(false);
-      setStreamingContent('');
-    });
-
-    return () => {
-      socket.off('chat:chunk');
-      socket.off('chat:done');
-      socket.off('chat:error');
-      socket.disconnect();
-    };
-  }, [isAuthenticated, conversationId, streamingContent, selectedModel, addMessage]);
+    },
+    [selectedModel, isAuthenticated, addMessage]
+  );
 
   const handleSend = useCallback(
-    async (content: string) => {
+    async (content: string, file?: AttachedFile | null) => {
+      const normalizedContent = content.trim();
+      const isVoiceMessage = file?.source === 'voice';
+      const isVideoMessage = file?.type.startsWith('video/') ?? false;
+      const displayText = normalizedContent || (isVoiceMessage || isVideoMessage ? '' : content);
+      const transportText =
+        normalizedContent ||
+        (isVideoMessage ? 'Video message' : isVoiceMessage ? 'Voice message' : content);
+      const conversationTitle = normalizedContent || file?.name || (isVideoMessage ? 'Video message' : 'Voice message');
+
       const userMsg: Message = {
         id: crypto.randomUUID(),
         role: 'user',
-        content,
+        content: displayText,
         timestamp: new Date(),
+        attachment: file || undefined,
       };
 
       setMessages((prev) => [...prev, userMsg]);
@@ -122,82 +171,214 @@ export default function ChatPage() {
       setStreamingContent('');
 
       if (isAuthenticated) {
-        // Authenticated user - use database and Socket.IO
-        const socket = getSocket();
         let convId = conversationId;
 
         try {
-          // Create conversation if first message
           if (!convId) {
             const conv = await createConversation({
               modelId: selectedModel,
-              title: content.slice(0, 50),
+              title: conversationTitle.slice(0, 50),
             }).unwrap();
             convId = conv.id;
             setConversationId(conv.id);
           }
 
-          // Best-effort: save user message (but don't block streaming if this fails)
           if (convId) {
             await addMessage({
               conversationId: convId,
               role: 'user',
-              content,
+              content: transportText,
+              attachments: file ? [file] : undefined,
             });
           }
         } catch (error) {
-          console.error('Failed to persist conversation/message, falling back to stream-only chat:', error);
+          console.error('Failed to persist, falling back to stream-only:', error);
         }
 
-        // Always attempt to stream a response, even if DB operations failed
-        socket.emit('chat', {
-          conversationId: convId ?? undefined,
-          modelId: selectedModel,
-          messages: messages.map((m) => ({ role: m.role, content: m.content })).concat([{ role: 'user', content }]),
-        });
+        await streamViaApi(transportText, convId);
       } else {
-        // Guest mode - use sessionStorage and mock streaming
-        try {
-          // Create conversation if first message
-          if (!conversationId) {
-            const guestConv = GuestChatStorage.createConversation(selectedModel, content.slice(0, 50));
-            setConversationId(guestConv.id);
-            GuestChatStorage.setCurrentConversationId(guestConv.id);
-          }
-
-          // Save user message to sessionStorage
-          GuestChatStorage.addMessage(conversationId!, 'user', content);
-
-          // Mock streaming response
-          const stream = mockStreamResponse(content);
-          let fullResponse = '';
-
-          for await (const chunk of stream) {
-            fullResponse += chunk;
-            setStreamingContent(fullResponse);
-          }
-
-          // Save assistant message
-          const assistantMsg: Message = {
-            id: crypto.randomUUID(),
-            role: 'assistant',
-            content: fullResponse,
-            timestamp: new Date(),
-            modelId: selectedModel,
-          };
-
-          setMessages((prev) => [...prev, assistantMsg]);
-          GuestChatStorage.addMessage(conversationId!, 'assistant', fullResponse);
-          setIsStreaming(false);
-          setStreamingContent('');
-        } catch (error) {
-          console.error('Failed to send message:', error);
-          setIsStreaming(false);
+        let guestConvId = conversationId;
+        if (!guestConvId) {
+          const guestConv = GuestChatStorage.createConversation(selectedModel, conversationTitle.slice(0, 50));
+          guestConvId = guestConv.id;
+          setConversationId(guestConv.id);
+          GuestChatStorage.setCurrentConversationId(guestConv.id);
         }
+
+        GuestChatStorage.addMessage(guestConvId, 'user', displayText, file || undefined);
+        await streamViaApi(transportText, guestConvId);
       }
     },
-    [selectedModel, conversationId, isAuthenticated, messages, createConversation, addMessage]
+    [selectedModel, conversationId, isAuthenticated, createConversation, addMessage, streamViaApi]
   );
+
+  const handlePauseStreaming = useCallback(() => {
+    streamAbortRef.current?.abort();
+
+    setMessages((prev) => {
+      if (!streamingContent.trim()) {
+        return prev;
+      }
+
+      return [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
+          role: 'assistant',
+          content: streamingContent,
+          timestamp: new Date(),
+          modelId: selectedModel,
+        },
+      ];
+    });
+
+    setIsStreaming(false);
+    setStreamingContent('');
+  }, [selectedModel, streamingContent]);
+
+  useEffect(() => {
+    if (hasAutoSent.current) {
+      return;
+    }
+
+    const pendingVoiceMessage = consumePendingVoiceMessage();
+    if (!pendingVoiceMessage) {
+      return;
+    }
+
+    const sendPendingVoiceMessage = async () => {
+      try {
+        const userMsg: Message = {
+          id: crypto.randomUUID(),
+          role: 'user',
+          content: '',
+          timestamp: new Date(),
+          attachment: pendingVoiceMessage,
+        };
+
+        hasAutoSent.current = true;
+        dispatch(clearInitialPrompt());
+
+        setMessages((prev) => [...prev, userMsg]);
+        setIsStreaming(true);
+        setStreamingContent('');
+
+        const conversationTitle = pendingVoiceMessage.name || 'Voice message';
+        const transportText = 'Voice message';
+
+        if (isAuthenticated) {
+          let convId = conversationId;
+
+          try {
+            if (!convId) {
+              const conv = await createConversation({
+                modelId: selectedModel,
+                title: conversationTitle.slice(0, 50),
+              }).unwrap();
+              convId = conv.id;
+              setConversationId(conv.id);
+            }
+
+            if (convId) {
+              await addMessage({
+                conversationId: convId,
+                role: 'user',
+                content: transportText,
+                attachments: [pendingVoiceMessage],
+              });
+            }
+          } catch (error) {
+            console.error('Failed to persist pending voice message:', error);
+          }
+
+          await streamViaApi(transportText, convId);
+          return;
+        }
+
+        let guestConvId = conversationId;
+        if (!guestConvId) {
+          const guestConv = GuestChatStorage.createConversation(selectedModel, conversationTitle.slice(0, 50));
+          guestConvId = guestConv.id;
+          setConversationId(guestConv.id);
+          GuestChatStorage.setCurrentConversationId(guestConv.id);
+        }
+
+        GuestChatStorage.addMessage(guestConvId, 'user', '', pendingVoiceMessage);
+        await streamViaApi(transportText, guestConvId);
+      } catch (error) {
+        console.error('Failed to send pending voice message:', error);
+        setIsStreaming(false);
+        setStreamingContent('');
+      }
+    };
+
+    void sendPendingVoiceMessage();
+  }, [addMessage, conversationId, createConversation, dispatch, isAuthenticated, selectedModel, streamViaApi]);
+
+  useEffect(() => {
+    if (hasAutoSent.current || peekPendingVoiceMessage()) return;
+
+    const prompt = initialPrompt ?? searchParams.get('q');
+    if (!prompt && !attachedFile) return;
+
+    hasAutoSent.current = true;
+
+    if (initialPrompt || attachedFile) {
+      const file = attachedFile;
+      dispatch(clearInitialPrompt());
+      handleSend(prompt ?? '', file);
+    } else if (prompt) {
+      handleSend(prompt);
+    }
+  }, [initialPrompt, attachedFile, searchParams, handleSend, dispatch]);
+
+  const handleNewChat = useCallback(() => {
+    streamAbortRef.current?.abort();
+    setMessages([]);
+    setConversationId(null);
+    setStreamingContent('');
+    setIsStreaming(false);
+    hasAutoSent.current = false;
+    if (!isAuthenticated) {
+      GuestChatStorage.clearCurrentConversationId();
+    }
+  }, [isAuthenticated]);
+
+  const handleClearHistory = useCallback(() => {
+    streamAbortRef.current?.abort();
+    setMessages([]);
+    setConversationId(null);
+    setStreamingContent('');
+    setIsStreaming(false);
+    hasAutoSent.current = false;
+    if (!isAuthenticated) {
+      GuestChatStorage.clearAll();
+      GuestChatStorage.clearCurrentConversationId();
+    }
+  }, [isAuthenticated]);
+
+  const handleExportChat = useCallback(() => {
+    if (messages.length === 0) return;
+
+    const exportData = {
+      model: selectedModel,
+      exportedAt: new Date().toISOString(),
+      messages: messages.map((m) => ({
+        role: m.role,
+        content: m.content,
+        timestamp: m.timestamp.toISOString(),
+        modelId: m.modelId,
+      })),
+    };
+
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `nexusai-chat-${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [messages, selectedModel]);
 
   const handleActionClick = useCallback((title: string) => {
     handleSend(`I'd like to: ${title}`);
@@ -206,7 +387,6 @@ export default function ChatPage() {
   return (
     <Box
       sx={{
-        // Sit directly below the fixed Navbar (64px toolbar height)
         position: 'fixed',
         top: 64,
         left: 0,
@@ -217,10 +397,8 @@ export default function ChatPage() {
         overflow: 'hidden',
       }}
     >
-      {/* Left: Models Sidebar */}
-      <ModelsSidebar selectedModel={selectedModel} onSelectModel={setSelectedModel} />
+      <ModelsSidebar />
 
-      {/* Center: Main chat area */}
       <Box
         sx={{
           flex: 1,
@@ -231,7 +409,6 @@ export default function ChatPage() {
           minWidth: 0,
         }}
       >
-        {/* Guest Banner */}
         {!isAuthenticated && (
           <Alert
             severity="info"
@@ -247,7 +424,7 @@ export default function ChatPage() {
             }}
           >
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%' }}>
-              <span>You're chatting as a guest. Sign in to save your conversations.</span>
+              <span>{t('chat.guestBanner')}</span>
               <Box sx={{ display: 'flex', gap: 1 }}>
                 <Button
                   component={Link}
@@ -264,7 +441,7 @@ export default function ChatPage() {
                     },
                   }}
                 >
-                  Sign in
+                  {t('chat.signIn')}
                 </Button>
                 <Button
                   component={Link}
@@ -279,14 +456,13 @@ export default function ChatPage() {
                     },
                   }}
                 >
-                  Sign up
+                  {t('chat.signUp')}
                 </Button>
               </Box>
             </Box>
           </Alert>
         )}
 
-        {/* Message area or Welcome screen */}
         {hasMessages ? (
           <MessageThread
             messages={messages}
@@ -300,16 +476,27 @@ export default function ChatPage() {
           </Box>
         )}
 
-        {/* Input at bottom */}
         <ChatInput
           onSend={handleSend}
+          onPause={handlePauseStreaming}
           isStreaming={isStreaming}
           selectedModel={selectedModel}
         />
       </Box>
 
-      {/* Right: Quick Actions Panel */}
-      <QuickActionsPanel />
+      <QuickActionsPanel
+        onNewChat={handleNewChat}
+        onClearHistory={handleClearHistory}
+        onExportChat={handleExportChat}
+      />
     </Box>
+  );
+}
+
+export default function ChatPage() {
+  return (
+    <Suspense>
+      <ChatPageContent />
+    </Suspense>
   );
 }

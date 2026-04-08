@@ -1,7 +1,4 @@
-import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
-import type { RootState } from '../index';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
+import { baseApi } from './baseApi';
 
 export interface Message {
   id: string;
@@ -34,27 +31,15 @@ export interface AddMessageRequest {
   attachments?: any[];
 }
 
-export const chatApi = createApi({
-  reducerPath: 'chatApi',
-  baseQuery: fetchBaseQuery({
-    baseUrl: API_URL,
-    prepareHeaders: (headers, { getState }) => {
-      const token = (getState() as RootState).auth.token;
-      if (token) {
-        headers.set('authorization', `Bearer ${token}`);
-      }
-      return headers;
-    },
-  }),
-  tagTypes: ['Conversation', 'Message'],
+export const chatApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getConversations: builder.query<Conversation[], void>({
       query: () => '/chat/conversations',
-      providesTags: ['Conversation'],
+      providesTags: ['Conversations'],
     }),
     getConversation: builder.query<Conversation, string>({
       query: (id) => `/chat/conversations/${id}`,
-      providesTags: (result, error, id) => [{ type: 'Conversation', id }],
+      providesTags: (result, error, id) => [{ type: 'Conversations', id }],
     }),
     createConversation: builder.mutation<Conversation, CreateConversationRequest>({
       query: (body) => ({
@@ -62,14 +47,14 @@ export const chatApi = createApi({
         method: 'POST',
         body,
       }),
-      invalidatesTags: ['Conversation'],
+      invalidatesTags: ['Conversations'],
     }),
     deleteConversation: builder.mutation<void, string>({
       query: (id) => ({
         url: `/chat/conversations/${id}`,
         method: 'DELETE',
       }),
-      invalidatesTags: ['Conversation'],
+      invalidatesTags: ['Conversations'],
     }),
     addMessage: builder.mutation<Message, AddMessageRequest>({
       query: ({ conversationId, ...body }) => ({
@@ -78,15 +63,13 @@ export const chatApi = createApi({
         body,
       }),
       invalidatesTags: (result, error, { conversationId }) => [
-        { type: 'Conversation', id: conversationId },
-        'Message',
+        { type: 'Conversations', id: conversationId },
       ],
     }),
     getMessages: builder.query<Message[], string>({
       query: (conversationId) => `/chat/conversations/${conversationId}/messages`,
       providesTags: (result, error, conversationId) => [
-        { type: 'Conversation', id: conversationId },
-        'Message',
+        { type: 'Conversations', id: conversationId },
       ],
     }),
   }),

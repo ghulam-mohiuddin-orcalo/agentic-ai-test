@@ -22,6 +22,7 @@ import {
   Divider,
 } from '@mui/material';
 import { Close, Add, Delete } from '@mui/icons-material';
+import { useTranslation } from 'react-i18next';
 
 interface NewAgentModalProps {
   open: boolean;
@@ -43,13 +44,14 @@ const AVAILABLE_MODELS = [
 ];
 
 const AVAILABLE_TOOLS = [
-  { id: 'web-search', name: 'Web Search', desc: 'Search the internet for information' },
-  { id: 'code-exec', name: 'Code Execution', desc: 'Execute Python code' },
-  { id: 'file-ops', name: 'File Operations', desc: 'Read and write files' },
-  { id: 'api-call', name: 'API Calls', desc: 'Make HTTP requests' },
+  { id: 'web-search', nameKey: 'agents.toolWebSearch', descKey: 'agents.toolWebSearchDesc' },
+  { id: 'code-exec', nameKey: 'agents.toolCodeExec', descKey: 'agents.toolCodeExecDesc' },
+  { id: 'file-ops', nameKey: 'agents.toolFileOps', descKey: 'agents.toolFileOpsDesc' },
+  { id: 'api-call', nameKey: 'agents.toolApiCalls', descKey: 'agents.toolApiCallsDesc' },
 ];
 
 export default function NewAgentModal({ open, onClose }: NewAgentModalProps) {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState(0);
   const [formData, setFormData] = useState({
     name: '',
@@ -87,7 +89,7 @@ export default function NewAgentModal({ open, onClose }: NewAgentModalProps) {
     } else {
       const tool = AVAILABLE_TOOLS.find((t) => t.id === toolId);
       if (tool) {
-        handleChange('tools', [...formData.tools, { id: tool.id, name: tool.name, enabled: true }]);
+        handleChange('tools', [...formData.tools, { id: tool.id, name: tool.nameKey, enabled: true }]);
       }
     }
   };
@@ -144,7 +146,7 @@ export default function NewAgentModal({ open, onClose }: NewAgentModalProps) {
               color: 'var(--text)',
             }}
           >
-            Create New Agent
+            {t('agents.createNew')}
           </Typography>
           <IconButton onClick={onClose} size="small">
             <Close sx={{ fontSize: 20 }} />
@@ -174,10 +176,10 @@ export default function NewAgentModal({ open, onClose }: NewAgentModalProps) {
               },
             }}
           >
-            <Tab label="1. Basic Info" />
-            <Tab label="2. Model & Prompt" disabled={!isStepValid(0)} />
-            <Tab label="3. Tools & Capabilities" disabled={!isStepValid(1)} />
-            <Tab label="4. Settings" disabled={!isStepValid(2)} />
+            <Tab label={t('agents.step1')} />
+            <Tab label={t('agents.step2')} disabled={!isStepValid(0)} />
+            <Tab label={t('agents.step3')} disabled={!isStepValid(1)} />
+            <Tab label={t('agents.step4')} disabled={!isStepValid(2)} />
           </Tabs>
         </Box>
 
@@ -188,11 +190,11 @@ export default function NewAgentModal({ open, onClose }: NewAgentModalProps) {
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
               <Box>
                 <Typography sx={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text)', mb: 1 }}>
-                  Agent Name *
+                  {t('agents.name')} *
                 </Typography>
                 <TextField
                   fullWidth
-                  placeholder="e.g., Customer Support Agent"
+                  placeholder={t('agents.namePlaceholder')}
                   value={formData.name}
                   onChange={(e) => handleChange('name', e.target.value)}
                   sx={{
@@ -209,13 +211,13 @@ export default function NewAgentModal({ open, onClose }: NewAgentModalProps) {
 
               <Box>
                 <Typography sx={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text)', mb: 1 }}>
-                  Description *
+                  {t('agents.description')} *
                 </Typography>
                 <TextField
                   fullWidth
                   multiline
                   rows={4}
-                  placeholder="Describe what your agent does and how it should behave..."
+                  placeholder={t('agents.descriptionPlaceholder')}
                   value={formData.description}
                   onChange={(e) => handleChange('description', e.target.value)}
                   sx={{
@@ -232,13 +234,13 @@ export default function NewAgentModal({ open, onClose }: NewAgentModalProps) {
 
               <Box>
                 <Typography sx={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text)', mb: 1 }}>
-                  Tags
+                  {t('agents.tags')}
                 </Typography>
                 <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
                   <TextField
                     fullWidth
                     size="small"
-                    placeholder="Add tags (press Enter)"
+                    placeholder={t('agents.tagsPlaceholder')}
                     value={tagInput}
                     onChange={(e) => setTagInput(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && handleAddTag()}
@@ -260,7 +262,7 @@ export default function NewAgentModal({ open, onClose }: NewAgentModalProps) {
                       color: 'var(--text2)',
                     }}
                   >
-                    Add
+                    {t('agents.addTag')}
                   </Button>
                 </Box>
                 <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap' }}>
@@ -288,7 +290,7 @@ export default function NewAgentModal({ open, onClose }: NewAgentModalProps) {
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
               <Box>
                 <Typography sx={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text)', mb: 1 }}>
-                  Select Model *
+                  {t('agents.selectModel')} *
                 </Typography>
                 <FormControl fullWidth>
                   <Select
@@ -303,7 +305,7 @@ export default function NewAgentModal({ open, onClose }: NewAgentModalProps) {
                     }}
                   >
                     <MenuItem value="" disabled>
-                      Choose a model
+                      {t('agents.selectModelPlaceholder')}
                     </MenuItem>
                     {AVAILABLE_MODELS.map((model) => (
                       <MenuItem key={model.id} value={model.id} sx={{ fontSize: '0.875rem' }}>
@@ -316,13 +318,13 @@ export default function NewAgentModal({ open, onClose }: NewAgentModalProps) {
 
               <Box>
                 <Typography sx={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text)', mb: 1 }}>
-                  System Prompt *
+                  {t('agents.systemPrompt')} *
                 </Typography>
                 <TextField
                   fullWidth
                   multiline
                   rows={8}
-                  placeholder="You are a helpful assistant that..."
+                  placeholder={t('agents.systemPromptPlaceholder')}
                   value={formData.systemPrompt}
                   onChange={(e) => handleChange('systemPrompt', e.target.value)}
                   sx={{
@@ -344,7 +346,7 @@ export default function NewAgentModal({ open, onClose }: NewAgentModalProps) {
           {activeTab === 2 && (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               <Typography sx={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text)', mb: 1 }}>
-                Enable Tools & Capabilities
+                {t('agents.enableTools')}
               </Typography>
               {AVAILABLE_TOOLS.map((tool) => {
                 const isEnabled = formData.tools.some((t) => t.id === tool.id);
@@ -369,10 +371,10 @@ export default function NewAgentModal({ open, onClose }: NewAgentModalProps) {
                     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       <Box>
                         <Typography sx={{ fontSize: '0.9375rem', fontWeight: 600, color: 'var(--text)', mb: 0.25 }}>
-                          {tool.name}
+                          {t(tool.nameKey)}
                         </Typography>
                         <Typography sx={{ fontSize: '0.8125rem', color: 'var(--text2)' }}>
-                          {tool.desc}
+                          {t(tool.descKey)}
                         </Typography>
                       </Box>
                       <Switch checked={isEnabled} />
@@ -388,7 +390,7 @@ export default function NewAgentModal({ open, onClose }: NewAgentModalProps) {
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
               <Box>
                 <Typography sx={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text)', mb: 1.5 }}>
-                  Temperature: {formData.temperature}
+                  {t('agents.temperature', { value: formData.temperature })}
                 </Typography>
                 <Slider
                   value={formData.temperature}
@@ -407,13 +409,13 @@ export default function NewAgentModal({ open, onClose }: NewAgentModalProps) {
                   }}
                 />
                 <Typography sx={{ fontSize: '0.75rem', color: 'var(--text3)', mt: 0.5 }}>
-                  Lower = more focused, Higher = more creative
+                  {t('agents.temperatureHint')}
                 </Typography>
               </Box>
 
               <Box>
                 <Typography sx={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text)', mb: 1 }}>
-                  Max Tokens
+                  {t('agents.maxTokens')}
                 </Typography>
                 <TextField
                   fullWidth
@@ -442,10 +444,10 @@ export default function NewAgentModal({ open, onClose }: NewAgentModalProps) {
                 label={
                   <Box>
                     <Typography sx={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text)' }}>
-                      Make Public
+                      {t('agents.makePublic')}
                     </Typography>
                     <Typography sx={{ fontSize: '0.75rem', color: 'var(--text3)' }}>
-                      Allow others to discover and use this agent
+                      {t('agents.makePublicDesc')}
                     </Typography>
                   </Box>
                 }
@@ -474,7 +476,7 @@ export default function NewAgentModal({ open, onClose }: NewAgentModalProps) {
               '&:disabled': { color: 'var(--text3)' },
             }}
           >
-            Back
+            {t('common.back')}
           </Button>
           <Box sx={{ display: 'flex', gap: 1 }}>
             <Button
@@ -488,7 +490,7 @@ export default function NewAgentModal({ open, onClose }: NewAgentModalProps) {
                 color: 'var(--text2)',
               }}
             >
-              Cancel
+              {t('common.cancel')}
             </Button>
             {activeTab < 3 ? (
               <Button
@@ -504,7 +506,7 @@ export default function NewAgentModal({ open, onClose }: NewAgentModalProps) {
                   '&:hover': { bgcolor: 'var(--accent2)' },
                 }}
               >
-                Next
+                {t('common.next')}
               </Button>
             ) : (
               <Button
@@ -519,7 +521,7 @@ export default function NewAgentModal({ open, onClose }: NewAgentModalProps) {
                   '&:hover': { bgcolor: 'var(--accent2)' },
                 }}
               >
-                Create Agent
+                {t('agents.createNew')}
               </Button>
             )}
           </Box>

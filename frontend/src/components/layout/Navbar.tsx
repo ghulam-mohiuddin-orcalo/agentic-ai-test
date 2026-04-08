@@ -21,51 +21,31 @@ import {
   Avatar,
   Divider,
 } from '@mui/material';
-import { Menu as MenuIcon, Close, Language as LanguageIcon, KeyboardArrowDown, Person, Settings, Logout } from '@mui/icons-material';
+import { Menu as MenuIcon, Close, KeyboardArrowDown, Person, Settings, Logout } from '@mui/icons-material';
 import Link from 'next/link';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/hooks/useAuth';
 import { useAppDispatch } from '@/store/hooks';
 import { logout } from '@/store/slices/authSlice';
+import LanguageSwitcher from './LanguageSwitcher';
 
-const NAV_LINKS = [
-  { label: 'Marketplace', href: '/marketplace' },
-  { label: 'Chat Hub', href: '/chat' },
-  { label: 'Agents', href: '/agents' },
-  { label: 'Discover', href: '/discover' },
-];
-
-const LANGUAGES = [
-  { code: 'EN', label: 'English' },
-  { code: 'ES', label: 'Español' },
-  { code: 'FR', label: 'Français' },
-  { code: 'DE', label: 'Deutsch' },
-  { code: 'ZH', label: '中文' },
+const NAV_LINK_KEYS = [
+  { labelKey: 'nav.chatHub', href: '/chat' },
+  { labelKey: 'nav.marketplace', href: '/marketplace' },
+  { labelKey: 'nav.discover', href: '/discover' },
+  { labelKey: 'nav.agents', href: '/agents' },
 ];
 
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [langAnchor, setLangAnchor] = useState<null | HTMLElement>(null);
   const [userAnchor, setUserAnchor] = useState<null | HTMLElement>(null);
-  const [selectedLang, setSelectedLang] = useState('EN');
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const pathname = usePathname();
   const router = useRouter();
   const dispatch = useAppDispatch();
   const { isAuthenticated, user } = useAuth();
-
-  const handleLangClick = (event: React.MouseEvent<HTMLElement>) => {
-    setLangAnchor(event.currentTarget);
-  };
-
-  const handleLangClose = () => {
-    setLangAnchor(null);
-  };
-
-  const handleLangSelect = (code: string) => {
-    setSelectedLang(code);
-    handleLangClose();
-  };
+  const { t } = useTranslation();
 
   const handleUserClick = (event: React.MouseEvent<HTMLElement>) => {
     setUserAnchor(event.currentTarget);
@@ -125,7 +105,7 @@ export default function Navbar() {
           {/* Desktop Nav - Center */}
           {!isMobile && (
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, position: 'absolute', left: '50%', transform: 'translateX(-50%)' }}>
-              {NAV_LINKS.map((link) => {
+              {NAV_LINK_KEYS.map((link) => {
                 const isActive = pathname === link.href || pathname.startsWith(link.href + '/');
                 return (
                   <Button
@@ -157,7 +137,7 @@ export default function Navbar() {
                       },
                     }}
                   >
-                    {link.label}
+                    {t(link.labelKey)}
                   </Button>
                 );
               })}
@@ -167,64 +147,7 @@ export default function Navbar() {
           {/* Right side - Language + Auth Buttons */}
           {!isMobile && (
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Button
-                onClick={handleLangClick}
-                startIcon={<LanguageIcon />}
-                endIcon={<KeyboardArrowDown />}
-                sx={{
-                  color: 'text.secondary',
-                  fontWeight: 500,
-                  fontSize: '0.9375rem',
-                  textTransform: 'none',
-                  px: 1.5,
-                  '&:hover': {
-                    bgcolor: 'rgba(0,0,0,0.04)',
-                  },
-                }}
-              >
-                {selectedLang}
-              </Button>
-              <Menu
-                anchorEl={langAnchor}
-                open={Boolean(langAnchor)}
-                onClose={handleLangClose}
-                anchorOrigin={{
-                  vertical: 'bottom',
-                  horizontal: 'right',
-                }}
-                transformOrigin={{
-                  vertical: 'top',
-                  horizontal: 'right',
-                }}
-                PaperProps={{
-                  sx: {
-                    mt: 1,
-                    minWidth: 150,
-                    borderRadius: 2,
-                    boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
-                  },
-                }}
-              >
-                {LANGUAGES.map((lang) => (
-                  <MenuItem
-                    key={lang.code}
-                    onClick={() => handleLangSelect(lang.code)}
-                    selected={selectedLang === lang.code}
-                    sx={{
-                      fontSize: '0.9375rem',
-                      py: 1.5,
-                      '&.Mui-selected': {
-                        bgcolor: 'rgba(200, 98, 42, 0.08)',
-                        '&:hover': {
-                          bgcolor: 'rgba(200, 98, 42, 0.12)',
-                        },
-                      },
-                    }}
-                  >
-                    {lang.label}
-                  </MenuItem>
-                ))}
-              </Menu>
+              <LanguageSwitcher />
 
               {isAuthenticated ? (
                 <>
@@ -293,7 +216,7 @@ export default function Navbar() {
                       sx={{ fontSize: '0.9375rem', py: 1.5 }}
                     >
                       <Person sx={{ mr: 1.5, fontSize: 20 }} />
-                      Profile
+                      {t('nav.profile')}
                     </MenuItem>
                     <MenuItem
                       component={Link}
@@ -302,7 +225,7 @@ export default function Navbar() {
                       sx={{ fontSize: '0.9375rem', py: 1.5 }}
                     >
                       <Settings sx={{ mr: 1.5, fontSize: 20 }} />
-                      Settings
+                      {t('nav.settings')}
                     </MenuItem>
                     <Divider />
                     <MenuItem
@@ -317,7 +240,7 @@ export default function Navbar() {
                       }}
                     >
                       <Logout sx={{ mr: 1.5, fontSize: 20 }} />
-                      Logout
+                      {t('nav.logout')}
                     </MenuItem>
                   </Menu>
                 </>
@@ -337,7 +260,7 @@ export default function Navbar() {
                       },
                     }}
                   >
-                    Log in
+                    {t('nav.signIn')}
                   </Button>
                   <Button
                     component={Link}
@@ -353,7 +276,7 @@ export default function Navbar() {
                       borderRadius: '8px',
                     }}
                   >
-                    Get started
+                    {t('nav.getStarted')} {'\u2192'}
                   </Button>
                 </>
               )}
@@ -390,8 +313,11 @@ export default function Navbar() {
             <Close />
           </IconButton>
         </Box>
+        <Box sx={{ mb: 2 }}>
+          <LanguageSwitcher />
+        </Box>
         <List>
-          {NAV_LINKS.map((link) => {
+          {NAV_LINK_KEYS.map((link) => {
             const isActive = pathname === link.href || pathname.startsWith(link.href + '/');
             return (
               <ListItem key={link.href} disablePadding>
@@ -406,7 +332,7 @@ export default function Navbar() {
                   }}
                 >
                   <ListItemText
-                    primary={link.label}
+                    primary={t(link.labelKey)}
                     primaryTypographyProps={{
                       fontWeight: isActive ? 700 : 500,
                       color: isActive ? '#C8622A' : 'inherit',
@@ -437,7 +363,7 @@ export default function Navbar() {
                 startIcon={<Person />}
                 sx={{ textTransform: 'none', justifyContent: 'flex-start' }}
               >
-                Profile
+                {t('nav.profile')}
               </Button>
               <Button
                 component={Link}
@@ -448,7 +374,7 @@ export default function Navbar() {
                 startIcon={<Settings />}
                 sx={{ textTransform: 'none', justifyContent: 'flex-start' }}
               >
-                Settings
+                {t('nav.settings')}
               </Button>
               <Button
                 onClick={() => {
@@ -469,7 +395,7 @@ export default function Navbar() {
                   },
                 }}
               >
-                Logout
+                {t('nav.logout')}
               </Button>
             </>
           ) : (
@@ -481,7 +407,7 @@ export default function Navbar() {
                 fullWidth
                 onClick={() => setMobileOpen(false)}
               >
-                Log in
+                {t('nav.signIn')}
               </Button>
               <Button
                 component={Link}
@@ -490,7 +416,7 @@ export default function Navbar() {
                 fullWidth
                 onClick={() => setMobileOpen(false)}
               >
-                Get started
+                {t('nav.getStarted')} {'\u2192'}
               </Button>
             </>
           )}

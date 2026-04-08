@@ -1,39 +1,42 @@
 ---
 name: test-module
-description: Run tests for specific module
+description: Run tests for a specific module
 ---
 
 # Test Module Skill
 
-Runs unit and integration tests for a specific NestJS module.
+Runs Jest tests filtered to a specific module with optional coverage and watch mode.
 
 ## Usage
-
-```bash
-/test-module <module-name> [--watch] [--coverage]
-```
-
-## What it does
-
-1. Finds test files for specified module
-2. Runs Jest with module filter
-3. Shows coverage if requested
-4. Watch mode for development
-
-## Examples
 
 ```bash
 /test-module auth
 /test-module chat --watch
 /test-module models --coverage
+/test-module all
 ```
 
-## Implementation
+## Steps
 
-```typescript
-// Build test pattern
-const pattern = `src/modules/${moduleName}`;
+1. If `all`: run `cd backend && npm test`
+2. Otherwise: run `cd backend && npx jest --testPathPattern="src/modules/<name>"`
+3. If `--coverage`: append `--coverage --coverageDirectory=coverage/<name>`
+4. If `--watch`: append `--watch`
+5. Report: tests passed/failed, coverage percentage (if requested)
 
-// Run tests
-await exec(`npm test -- ${pattern} ${watch ? '--watch' : ''} ${coverage ? '--coverage' : ''}`);
-```
+## Module Name Mapping
+
+| Input | Pattern |
+|-------|---------|
+| `auth` | `src/modules/auth/` |
+| `chat` | `src/modules/chat/` |
+| `models` | `src/modules/models/` |
+| `agents` | `src/modules/agents/` |
+| `users` | `src/modules/users/` |
+| `usage` | `src/modules/usage/` |
+| `all` | `src/` |
+
+## Notes
+
+- Tests must exist (`*.spec.ts` files) to pass
+- If no tests found, report "No test files found for module: <name>"

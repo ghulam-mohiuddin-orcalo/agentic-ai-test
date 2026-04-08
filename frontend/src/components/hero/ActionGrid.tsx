@@ -1,91 +1,39 @@
 'use client';
 
 import { Box, Paper, Typography } from '@mui/material';
+import { useRouter } from 'next/navigation';
+import { useTranslation } from 'react-i18next';
 
 interface Action {
   emoji: string;
-  label: string;
-  prompt: string;
+  labelKey: string;
 }
 
 const ACTIONS: Action[] = [
-  {
-    emoji: '✍️',
-    label: 'Write an article',
-    prompt: 'Help me write a professional article about',
-  },
-  {
-    emoji: '💻',
-    label: 'Debug code',
-    prompt: 'Help me debug this code:',
-  },
-  {
-    emoji: '🎨',
-    label: 'Generate image',
-    prompt: 'Create an image of',
-  },
-  {
-    emoji: '📊',
-    label: 'Analyze data',
-    prompt: 'Analyze this data and provide insights:',
-  },
-  {
-    emoji: '🔍',
-    label: 'Research topic',
-    prompt: 'Research and summarize information about',
-  },
-  {
-    emoji: '💡',
-    label: 'Brainstorm ideas',
-    prompt: 'Help me brainstorm ideas for',
-  },
-  {
-    emoji: '📝',
-    label: 'Summarize text',
-    prompt: 'Summarize this text:',
-  },
-  {
-    emoji: '🌐',
-    label: 'Translate',
-    prompt: 'Translate this to',
-  },
-  {
-    emoji: '🎯',
-    label: 'Create plan',
-    prompt: 'Create a detailed plan for',
-  },
-  {
-    emoji: '📧',
-    label: 'Write email',
-    prompt: 'Help me write a professional email about',
-  },
-  {
-    emoji: '🤖',
-    label: 'Build agent',
-    prompt: 'Help me build an AI agent that can',
-  },
-  {
-    emoji: '📚',
-    label: 'Explain concept',
-    prompt: 'Explain this concept in simple terms:',
-  },
-  {
-    emoji: '🔧',
-    label: 'Fix bug',
-    prompt: 'Help me fix this bug:',
-  },
-  {
-    emoji: '🎓',
-    label: 'Learn skill',
-    prompt: 'Teach me how to',
-  },
+  { emoji: '\uD83C\uDFA8', labelKey: 'home.actionGrid.createImage' },
+  { emoji: '\uD83C\uDFB5', labelKey: 'home.actionGrid.generateAudio' },
+  { emoji: '\uD83D\uDCDD', labelKey: 'home.actionGrid.summarizeText' },
+  { emoji: '\uD83D\uDCBB', labelKey: 'home.actionGrid.writeCode' },
+  { emoji: '\uD83D\uDCCA', labelKey: 'home.actionGrid.analyzeData' },
+  { emoji: '\uD83C\uDF10', labelKey: 'home.actionGrid.translate' },
+  { emoji: '\uD83D\uDD0D', labelKey: 'home.actionGrid.researchTopic' },
+  { emoji: '\u2708\uFE0F', labelKey: 'home.actionGrid.planTrip' },
+  { emoji: '\uD83D\uDCE7', labelKey: 'home.actionGrid.draftEmail' },
+  { emoji: '\uD83D\uDC1B', labelKey: 'home.actionGrid.debugCode' },
+  { emoji: '\uD83D\uDD8C\uFE0F', labelKey: 'home.actionGrid.designUI' },
+  { emoji: '\uD83D\uDCD6', labelKey: 'home.actionGrid.writeStory' },
+  { emoji: '\uD83D\uDCDA', labelKey: 'home.actionGrid.learnConcept' },
+  { emoji: '\u2696\uFE0F', labelKey: 'home.actionGrid.compareOptions' },
 ];
 
 interface ActionGridProps {
-  onActionClick: (prompt: string) => void;
+  onActionClick?: (prompt: string) => void;
 }
 
 export default function ActionGrid({ onActionClick }: ActionGridProps) {
+  const router = useRouter();
+  const { t } = useTranslation();
+
   return (
     <Box>
       <Typography
@@ -97,7 +45,7 @@ export default function ActionGrid({ onActionClick }: ActionGridProps) {
           color: 'text.secondary',
         }}
       >
-        Or try one of these
+        {t('home.actionGrid.title')}
       </Typography>
 
       <Box
@@ -114,7 +62,11 @@ export default function ActionGrid({ onActionClick }: ActionGridProps) {
         {ACTIONS.map((action, index) => (
           <Paper
             key={index}
-            onClick={() => onActionClick(action.prompt)}
+            onClick={() => {
+              const label = t(action.labelKey);
+              if (onActionClick) onActionClick(label);
+              router.push('/chat?q=' + encodeURIComponent(label));
+            }}
             sx={{
               p: 2,
               textAlign: 'center',
@@ -146,7 +98,7 @@ export default function ActionGrid({ onActionClick }: ActionGridProps) {
                 fontSize: '0.75rem',
               }}
             >
-              {action.label}
+              {t(action.labelKey)}
             </Typography>
           </Paper>
         ))}

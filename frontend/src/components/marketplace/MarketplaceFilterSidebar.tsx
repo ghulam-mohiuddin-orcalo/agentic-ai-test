@@ -10,6 +10,7 @@ import {
   Radio,
   RadioGroup,
 } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 
 export interface FilterState {
   providers: string[];
@@ -33,27 +34,34 @@ const PROVIDERS = [
 ];
 
 const MODEL_TYPES = [
-  { id: 'language', label: 'Language' },
-  { id: 'vision', label: 'Vision' },
-  { id: 'code', label: 'Code' },
-  { id: 'audio', label: 'Audio' },
-  { id: 'image-gen', label: 'Image Gen' },
-  { id: 'embedding', label: 'Embedding' },
+  { id: 'language', labelKey: 'filters.language' },
+  { id: 'vision', labelKey: 'filters.vision' },
+  { id: 'code', labelKey: 'filters.code' },
+  { id: 'audio', labelKey: 'filters.audio' },
+  { id: 'image-gen', labelKey: 'filters.imageGen' },
+  { id: 'embedding', labelKey: 'filters.embedding' },
 ];
 
 const CONTEXT_SIZES = [
-  { value: 'any', label: 'Any' },
-  { value: '8k', label: '8K+' },
-  { value: '32k', label: '32K+' },
-  { value: '128k', label: '128K+' },
-  { value: '1m', label: '1M+' },
+  { value: 'any', labelKey: 'filters.any' },
+  { value: '8k', labelKey: 'filters.context8k' },
+  { value: '32k', labelKey: 'filters.context32k' },
+  { value: '128k', labelKey: 'filters.context128k' },
+  { value: '1m', labelKey: 'filters.context1m' },
 ];
 
 const LICENSE_OPTIONS = [
-  { value: 'any', label: 'Any' },
-  { value: 'commercial', label: 'Commercial' },
-  { value: 'open', label: 'Open Source' },
-  { value: 'research', label: 'Research only' },
+  { value: 'any', labelKey: 'filters.any' },
+  { value: 'commercial', labelKey: 'filters.commercial' },
+  { value: 'open', labelKey: 'filters.openSource' },
+  { value: 'research', labelKey: 'filters.researchOnly' },
+];
+
+const QUICK_GUIDES = [
+  { labelKey: 'filters.guideChoose', href: '/discover' },
+  { labelKey: 'filters.guidePricing', href: '/discover' },
+  { labelKey: 'filters.guideOpenSource', href: '/discover' },
+  { labelKey: 'filters.guideBenchmarks', href: '/discover' },
 ];
 
 interface Props {
@@ -79,6 +87,7 @@ function SectionHeader({ label }: { label: string }) {
 }
 
 export default function MarketplaceFilterSidebar({ filters, onChange }: Props) {
+  const { t } = useTranslation();
   const toggleProvider = (id: string) => {
     const next = filters.providers.includes(id)
       ? filters.providers.filter((p) => p !== id)
@@ -135,15 +144,15 @@ export default function MarketplaceFilterSidebar({ filters, onChange }: Props) {
           }}
         >
           <Typography sx={{ fontSize: '0.75rem', color: 'var(--accent)', fontWeight: 600, mb: 0.25 }}>
-            🎯 Not sure which model?
+            🎯 {t('filters.notSure')}
           </Typography>
           <Typography sx={{ fontSize: '0.6875rem', color: 'var(--text2)', lineHeight: 1.4 }}>
-            Tell me what you're trying to achieve and I'll help you find it
+            {t('filters.notSureDesc')}
           </Typography>
         </Box>
 
         {/* Provider */}
-        <SectionHeader label="PROVIDER" />
+        <SectionHeader label={t('filters.provider')} />
         {PROVIDERS.map(({ id, label, count }) => (
           <FormControlLabel
             key={id}
@@ -171,8 +180,8 @@ export default function MarketplaceFilterSidebar({ filters, onChange }: Props) {
 
       {/* Model type */}
       <Box sx={{ p: 2, pb: 1.5 }}>
-        <SectionHeader label="MODEL TYPE" />
-        {MODEL_TYPES.map(({ id, label }) => (
+        <SectionHeader label={t('filters.modelType')} />
+        {MODEL_TYPES.map(({ id, labelKey }) => (
           <FormControlLabel
             key={id}
             control={
@@ -182,7 +191,7 @@ export default function MarketplaceFilterSidebar({ filters, onChange }: Props) {
                 onChange={() => toggleType(id)}
               />
             }
-            label={label}
+            label={t(labelKey)}
             sx={checkboxSx}
           />
         ))}
@@ -192,7 +201,7 @@ export default function MarketplaceFilterSidebar({ filters, onChange }: Props) {
 
       {/* Price range */}
       <Box sx={{ p: 2, pb: 1.5 }}>
-        <SectionHeader label="PRICE / 1M TOKENS" />
+        <SectionHeader label={t('filters.price')} />
         <Box sx={{ px: 0.5, pt: 1 }}>
           <Slider
             value={filters.priceRange}
@@ -201,7 +210,7 @@ export default function MarketplaceFilterSidebar({ filters, onChange }: Props) {
             max={50}
             step={0.5}
             valueLabelDisplay="auto"
-            valueLabelFormat={(v) => (v === 0 ? 'Free' : `$${v}`)}
+            valueLabelFormat={(v) => (v === 0 ? t('filters.free') : `$${v}`)}
             sx={{
               color: 'var(--accent)',
               '& .MuiSlider-thumb': { width: 14, height: 14 },
@@ -211,7 +220,7 @@ export default function MarketplaceFilterSidebar({ filters, onChange }: Props) {
           />
           <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
             <Typography sx={{ fontSize: '0.6875rem', color: 'var(--text3)' }}>
-              {filters.priceRange[0] === 0 ? 'Free' : `$${filters.priceRange[0]}`}
+              {filters.priceRange[0] === 0 ? t('filters.free') : `$${filters.priceRange[0]}`}
             </Typography>
             <Typography sx={{ fontSize: '0.6875rem', color: 'var(--text3)' }}>
               ${filters.priceRange[1]}
@@ -224,13 +233,13 @@ export default function MarketplaceFilterSidebar({ filters, onChange }: Props) {
 
       {/* Context size */}
       <Box sx={{ p: 2, pb: 1.5 }}>
-        <SectionHeader label="CONTEXT SIZE" />
+        <SectionHeader label={t('filters.contextSize')} />
         <RadioGroup
           value={filters.contextSize}
           onChange={(e) => onChange({ ...filters, contextSize: e.target.value })}
         >
-          {CONTEXT_SIZES.map(({ value, label }) => (
-            <FormControlLabel key={value} value={value} control={<Radio size="small" />} label={label} sx={radioSx} />
+          {CONTEXT_SIZES.map(({ value, labelKey }) => (
+            <FormControlLabel key={value} value={value} control={<Radio size="small" />} label={t(labelKey)} sx={radioSx} />
           ))}
         </RadioGroup>
       </Box>
@@ -238,16 +247,49 @@ export default function MarketplaceFilterSidebar({ filters, onChange }: Props) {
       <Divider sx={{ borderColor: 'var(--border)' }} />
 
       {/* License */}
-      <Box sx={{ p: 2, pb: 2 }}>
-        <SectionHeader label="LICENSE" />
+      <Box sx={{ p: 2, pb: 1.5 }}>
+        <SectionHeader label={t('filters.license')} />
         <RadioGroup
           value={filters.license}
           onChange={(e) => onChange({ ...filters, license: e.target.value })}
         >
-          {LICENSE_OPTIONS.map(({ value, label }) => (
-            <FormControlLabel key={value} value={value} control={<Radio size="small" />} label={label} sx={radioSx} />
+          {LICENSE_OPTIONS.map(({ value, labelKey }) => (
+            <FormControlLabel key={value} value={value} control={<Radio size="small" />} label={t(labelKey)} sx={radioSx} />
           ))}
         </RadioGroup>
+      </Box>
+
+      <Divider sx={{ borderColor: 'var(--border)' }} />
+
+      {/* Quick Guides */}
+      <Box sx={{ p: 2, pb: 2 }}>
+        <SectionHeader label={t('filters.quickGuides')} />
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.25 }}>
+          {QUICK_GUIDES.map(({ labelKey, href }) => (
+            <Box
+              key={labelKey}
+              component="a"
+              href={href}
+              sx={{
+                fontSize: '0.8125rem',
+                color: 'var(--accent)',
+                textDecoration: 'none',
+                py: 0.625,
+                px: 0.5,
+                borderRadius: '6px',
+                cursor: 'pointer',
+                lineHeight: 1.4,
+                display: 'block',
+                '&:hover': {
+                  bgcolor: 'var(--accent-lt)',
+                  textDecoration: 'underline',
+                },
+              }}
+            >
+              {t(labelKey)}
+            </Box>
+          ))}
+        </Box>
       </Box>
     </Box>
   );

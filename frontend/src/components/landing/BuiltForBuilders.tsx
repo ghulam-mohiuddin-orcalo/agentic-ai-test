@@ -1,16 +1,19 @@
 'use client';
 
 import { Box, Typography, Paper } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 import { BUILDER_FEATURES } from '@/lib/constants';
 
 export default function BuiltForBuilders() {
+  const { t } = useTranslation();
+
   return (
     <Box>
       <Typography variant="h2" sx={{ fontSize: '1.5rem', mb: 1 }}>
-        Built for every builder
+        {t('landing.builders.title')}
       </Typography>
       <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
-        Whether you're a solo developer or enterprise team
+        {t('landing.builders.subtitle')}
       </Typography>
 
       <Box
